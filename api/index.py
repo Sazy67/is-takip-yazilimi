@@ -80,8 +80,12 @@ def init_db():
     
     conn.close()
 
-# Veritabanını başlat
-init_db()
+# Her istekte veritabanını kontrol et
+@app.before_request
+def before_request():
+    import os
+    if not os.path.exists(DB_PATH):
+        init_db()
 
 def create_token(user_id, username, role):
     payload = {
