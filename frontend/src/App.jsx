@@ -6,15 +6,6 @@ import './App.css'
 
 axios.defaults.withCredentials = true
 
-// Token'ı her istekte gönder
-axios.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
 function App() {
   const [user, setUser] = useState(null)
   const [kayitlar, setKayitlar] = useState([])
@@ -40,6 +31,21 @@ function App() {
     sevk_tarihi: '',
     notlar: ''
   })
+
+  // Token'ı her istekte gönder
+  useEffect(() => {
+    const interceptor = axios.interceptors.request.use((config) => {
+      const token = localStorage.getItem('token')
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+      }
+      return config
+    })
+
+    return () => {
+      axios.interceptors.request.eject(interceptor)
+    }
+  }, [])
 
   useEffect(() => {
     checkAuth()
