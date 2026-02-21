@@ -1,91 +1,71 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import sqlite3
+import os
 from datetime import datetime, timedelta
 import secrets
-import os
 import jwt
+import json
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 CORS(app, supports_credentials=True, origins=['*'])
 
-# Vercel için veritabanı yolu
-DB_PATH = '/tmp/kayitlar.db'
+# Basit JSON dosya tabanlı veritabanı (Vercel için)
+DATA_FILE = '/tmp/data.json'
 
-def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+def load_data():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {
+        'users': [
+            {'id': 1, 'username': 'admin', 'password': 'admin123', 'role': 'admin'},
+            {'id': 2, 'username': 'user', 'password': 'user123', 'role': 'user'}
+        ],
+        'kayitlar': [
+            {
+                'id': 1,
+                'bolum': 'Üretim',
+                'teklif_no': 'TK-2025-001',
+                'musteri_ismi': 'ABC İnşaat Ltd.',
+                'teklif_tarihi': '2025-01-15',
+                'onay_tarihi': '2025-01-20',
+                'uretime_verilme_tarihi': '2025-01-25',
+                'uretim_numarasi': 'UR-001',
+                'cam_siparis_tarihi': '2025-01-22',
+                'cam_siparis_numarasi': 'CS-001',
+                'cam_adedi': '50',
+                'uretim_planlama_tarihi': '2025-01-28',
+                'paketleme_tarihi': '2025-02-05',
+                'kasetleme_tarihi': '2025-02-08',
+                'sevk_tarihi': '2025-02-10',
+                'notlar': 'İlk sipariş, öncelikli'
+            },
+            {
+                'id': 2,
+                'bolum': 'Satış',
+                'teklif_no': 'TK-2025-002',
+                'musteri_ismi': 'XYZ Yapı A.Ş.',
+                'teklif_tarihi': '2025-01-18',
+                'onay_tarihi': '2025-01-22',
+                'uretime_verilme_tarihi': '2025-01-27',
+                'uretim_numarasi': 'UR-002',
+                'cam_siparis_tarihi': '2025-01-25',
+                'cam_siparis_numarasi': 'CS-002',
+                'cam_adedi': '75',
+                'uretim_planlama_tarihi': '2025-02-01',
+                'paketleme_tarihi': '2025-02-08',
+                'kasetleme_tarihi': '2025-02-12',
+                'sevk_tarihi': '2025-02-15',
+                'notlar': 'Standart teslimat'
+            }
+        ],
+        'next_id': 3
+    }
 
-def init_db():
-    conn = get_db()
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS kayitlar (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            bolum TEXT,
-            teklif_no TEXT,
-            musteri_ismi TEXT,
-            teklif_tarihi TEXT,
-            onay_tarihi TEXT,
-            uretime_verilme_tarihi TEXT,
-            uretim_numarasi TEXT,
-            cam_siparis_tarihi TEXT,
-            cam_siparis_numarasi TEXT,
-            cam_adedi TEXT,
-            uretim_planlama_tarihi TEXT,
-            paketleme_tarihi TEXT,
-            kasetleme_tarihi TEXT,
-            sevk_tarihi TEXT,
-            notlar TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL
-        )
-    ''')
-    
-    # Varsayılan kullanıcılar ekle
-    try:
-        conn.execute("INSERT INTO users (username, password, role) VALUES ('admin', 'admin123', 'admin')")
-        conn.execute("INSERT INTO users (username, password, role) VALUES ('user', 'user123', 'user')")
-        conn.commit()
-    except:
-        pass
-    
-    # Örnek kayıtlar ekle
-    try:
-        conn.execute('''
-            INSERT INTO kayitlar (
-                bolum, teklif_no, musteri_ismi, teklif_tarihi, onay_tarihi,
-                uretime_verilme_tarihi, uretim_numarasi, cam_siparis_tarihi,
-                cam_siparis_numarasi, cam_adedi, uretim_planlama_tarihi,
-                paketleme_tarihi, kasetleme_tarihi, sevk_tarihi, notlar
-            ) VALUES 
-            ('Üretim', 'TK-2025-001', 'ABC İnşaat Ltd.', '2025-01-15', '2025-01-20', '2025-01-25', 'UR-001', '2025-01-22', 'CS-001', '50', '2025-01-28', '2025-02-05', '2025-02-08', '2025-02-10', 'İlk sipariş, öncelikli'),
-            ('Satış', 'TK-2025-002', 'XYZ Yapı A.Ş.', '2025-01-18', '2025-01-22', '2025-01-27', 'UR-002', '2025-01-25', 'CS-002', '75', '2025-02-01', '2025-02-08', '2025-02-12', '2025-02-15', 'Standart teslimat'),
-            ('Proje', 'TK-2025-003', 'Mega Plaza AVM', '2025-01-20', '2025-01-25', '2025-02-01', 'UR-003', '2025-01-28', 'CS-003', '100', '2025-02-05', '2025-02-12', '2025-02-15', '2025-02-18', 'Büyük proje, dikkatli paketleme'),
-            ('Üretim', 'TK-2025-004', 'Güneş Enerji Ltd.', '2025-01-22', '2025-01-28', '2025-02-03', 'UR-004', '2025-01-30', 'CS-004', '60', '2025-02-08', '2025-02-15', '2025-02-18', '2025-02-20', 'Özel cam tipi'),
-            ('Satış', 'TK-2025-005', 'Yıldız Mobilya', '2025-01-25', '2025-02-01', '2025-02-05', 'UR-005', '2025-02-02', 'CS-005', '40', '2025-02-10', '2025-02-18', '2025-02-20', '2025-02-22', 'Acil teslimat gerekli')
-        ''')
-        conn.commit()
-    except:
-        pass
-    
-    conn.close()
-
-# Her istekte veritabanını kontrol et
-@app.before_request
-def before_request():
-    import os
-    if not os.path.exists(DB_PATH):
-        init_db()
+def save_data(data):
+    with open(DATA_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 def create_token(user_id, username, role):
     payload = {
@@ -105,14 +85,12 @@ def verify_token(token):
 
 @app.route('/api/login', methods=['POST'])
 def login():
+    data_store = load_data()
     data = request.json
     username = data.get('username')
     password = data.get('password')
     
-    conn = get_db()
-    user = conn.execute('SELECT * FROM users WHERE username=? AND password=?', 
-                       (username, password)).fetchone()
-    conn.close()
+    user = next((u for u in data_store['users'] if u['username'] == username and u['password'] == password), None)
     
     if user:
         token = create_token(user['id'], user['username'], user['role'])
@@ -145,10 +123,8 @@ def get_current_user():
 
 @app.route('/api/kayitlar', methods=['GET'])
 def get_kayitlar():
-    conn = get_db()
-    kayitlar = conn.execute('SELECT * FROM kayitlar ORDER BY id DESC').fetchall()
-    conn.close()
-    return jsonify([dict(k) for k in kayitlar])
+    data_store = load_data()
+    return jsonify(data_store['kayitlar'])
 
 @app.route('/api/kayitlar', methods=['POST'])
 def create_kayit():
@@ -158,26 +134,33 @@ def create_kayit():
     if not user_data or user_data['role'] != 'admin':
         return jsonify({'error': 'Yetkisiz işlem'}), 403
     
+    data_store = load_data()
     data = request.json
-    conn = get_db()
-    cursor = conn.execute('''
-        INSERT INTO kayitlar (
-            bolum, teklif_no, musteri_ismi, teklif_tarihi, onay_tarihi,
-            uretime_verilme_tarihi, uretim_numarasi, cam_siparis_tarihi,
-            cam_siparis_numarasi, cam_adedi, uretim_planlama_tarihi,
-            paketleme_tarihi, kasetleme_tarihi, sevk_tarihi, notlar
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        data.get('bolum'), data.get('teklif_no'), data.get('musteri_ismi'),
-        data.get('teklif_tarihi'), data.get('onay_tarihi'), data.get('uretime_verilme_tarihi'),
-        data.get('uretim_numarasi'), data.get('cam_siparis_tarihi'), data.get('cam_siparis_numarasi'),
-        data.get('cam_adedi'), data.get('uretim_planlama_tarihi'), data.get('paketleme_tarihi'),
-        data.get('kasetleme_tarihi'), data.get('sevk_tarihi'), data.get('notlar')
-    ))
-    conn.commit()
-    kayit_id = cursor.lastrowid
-    conn.close()
-    return jsonify({'id': kayit_id}), 201
+    
+    new_kayit = {
+        'id': data_store['next_id'],
+        'bolum': data.get('bolum'),
+        'teklif_no': data.get('teklif_no'),
+        'musteri_ismi': data.get('musteri_ismi'),
+        'teklif_tarihi': data.get('teklif_tarihi'),
+        'onay_tarihi': data.get('onay_tarihi'),
+        'uretime_verilme_tarihi': data.get('uretime_verilme_tarihi'),
+        'uretim_numarasi': data.get('uretim_numarasi'),
+        'cam_siparis_tarihi': data.get('cam_siparis_tarihi'),
+        'cam_siparis_numarasi': data.get('cam_siparis_numarasi'),
+        'cam_adedi': data.get('cam_adedi'),
+        'uretim_planlama_tarihi': data.get('uretim_planlama_tarihi'),
+        'paketleme_tarihi': data.get('paketleme_tarihi'),
+        'kasetleme_tarihi': data.get('kasetleme_tarihi'),
+        'sevk_tarihi': data.get('sevk_tarihi'),
+        'notlar': data.get('notlar')
+    }
+    
+    data_store['kayitlar'].insert(0, new_kayit)
+    data_store['next_id'] += 1
+    save_data(data_store)
+    
+    return jsonify({'id': new_kayit['id']}), 201
 
 @app.route('/api/kayitlar/<int:id>', methods=['PUT'])
 def update_kayit(id):
@@ -187,47 +170,47 @@ def update_kayit(id):
     if not user_data:
         return jsonify({'error': 'Yetkisiz işlem'}), 403
     
+    data_store = load_data()
     data = request.json
-    conn = get_db()
+    
+    kayit = next((k for k in data_store['kayitlar'] if k['id'] == id), None)
+    if not kayit:
+        return jsonify({'error': 'Kayıt bulunamadı'}), 404
     
     # Kullanıcı sadece not güncelleyebilir
     if user_data['role'] == 'user':
-        kayit = conn.execute('SELECT notlar FROM kayitlar WHERE id=?', (id,)).fetchone()
-        if kayit:
-            eski_not = kayit['notlar'] or ''
-            yeni_not = data.get('notlar', '')
-            
-            tarih = datetime.now().strftime('%Y-%m-%d %H:%M')
-            not_ekleme = f"\n[{user_data['username']} - {tarih}]: {yeni_not}"
-            
-            guncel_not = eski_not + not_ekleme
-            
-            conn.execute('UPDATE kayitlar SET notlar=? WHERE id=?', (guncel_not, id))
-            conn.commit()
-            conn.close()
-            return jsonify({'success': True})
+        eski_not = kayit.get('notlar', '')
+        yeni_not = data.get('notlar', '')
+        
+        tarih = datetime.now().strftime('%Y-%m-%d %H:%M')
+        not_ekleme = f"\n[{user_data['username']} - {tarih}]: {yeni_not}"
+        
+        kayit['notlar'] = eski_not + not_ekleme
+        save_data(data_store)
+        return jsonify({'success': True})
     
     # Admin tüm alanları güncelleyebilir
     if user_data['role'] == 'admin':
-        conn.execute('''
-            UPDATE kayitlar SET
-                bolum=?, teklif_no=?, musteri_ismi=?, teklif_tarihi=?, onay_tarihi=?,
-                uretime_verilme_tarihi=?, uretim_numarasi=?, cam_siparis_tarihi=?,
-                cam_siparis_numarasi=?, cam_adedi=?, uretim_planlama_tarihi=?,
-                paketleme_tarihi=?, kasetleme_tarihi=?, sevk_tarihi=?, notlar=?
-            WHERE id=?
-        ''', (
-            data.get('bolum'), data.get('teklif_no'), data.get('musteri_ismi'),
-            data.get('teklif_tarihi'), data.get('onay_tarihi'), data.get('uretime_verilme_tarihi'),
-            data.get('uretim_numarasi'), data.get('cam_siparis_tarihi'), data.get('cam_siparis_numarasi'),
-            data.get('cam_adedi'), data.get('uretim_planlama_tarihi'), data.get('paketleme_tarihi'),
-            data.get('kasetleme_tarihi'), data.get('sevk_tarihi'), data.get('notlar'), id
-        ))
-        conn.commit()
-        conn.close()
+        kayit.update({
+            'bolum': data.get('bolum'),
+            'teklif_no': data.get('teklif_no'),
+            'musteri_ismi': data.get('musteri_ismi'),
+            'teklif_tarihi': data.get('teklif_tarihi'),
+            'onay_tarihi': data.get('onay_tarihi'),
+            'uretime_verilme_tarihi': data.get('uretime_verilme_tarihi'),
+            'uretim_numarasi': data.get('uretim_numarasi'),
+            'cam_siparis_tarihi': data.get('cam_siparis_tarihi'),
+            'cam_siparis_numarasi': data.get('cam_siparis_numarasi'),
+            'cam_adedi': data.get('cam_adedi'),
+            'uretim_planlama_tarihi': data.get('uretim_planlama_tarihi'),
+            'paketleme_tarihi': data.get('paketleme_tarihi'),
+            'kasetleme_tarihi': data.get('kasetleme_tarihi'),
+            'sevk_tarihi': data.get('sevk_tarihi'),
+            'notlar': data.get('notlar')
+        })
+        save_data(data_store)
         return jsonify({'success': True})
     
-    conn.close()
     return jsonify({'error': 'Yetkisiz işlem'}), 403
 
 @app.route('/api/kayitlar/<int:id>', methods=['DELETE'])
@@ -238,8 +221,7 @@ def delete_kayit(id):
     if not user_data or user_data['role'] != 'admin':
         return jsonify({'error': 'Yetkisiz işlem'}), 403
     
-    conn = get_db()
-    conn.execute('DELETE FROM kayitlar WHERE id=?', (id,))
-    conn.commit()
-    conn.close()
+    data_store = load_data()
+    data_store['kayitlar'] = [k for k in data_store['kayitlar'] if k['id'] != id]
+    save_data(data_store)
     return jsonify({'success': True})
