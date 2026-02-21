@@ -1,13 +1,14 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 import secrets
 import os
+import jwt
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=['https://rigelistakip.vercel.app', 'http://localhost:5173'])
 
 # Vercel için veritabanı yolu
 DB_PATH = '/tmp/kayitlar.db'
@@ -82,6 +83,22 @@ def init_db():
 # Veritabanını başlat
 init_db()
 
+def create_token(user_id, username, role):
+    payload = {
+        'user_id': user_id,
+        'username': username,
+        'role': role,
+        'exp': datetime.utcnow() + timedelta(days=7)
+    }
+    return jwt.encode(payload, app.secret_key, algorithm='HS256')
+
+def verify_token(token):
+    try:
+        payload = jwt.decode(token, app.secret_key, algorithms=['HS256'])
+        return payload
+    except:
+        return None
+
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -94,11 +111,10 @@ def login():
     conn.close()
     
     if user:
-        session['user_id'] = user['id']
-        session['username'] = user['username']
-        session['role'] = user['role']
+        token = create_token(user['id'], user['username'], user['role'])
         return jsonify({
             'success': True,
+            'token': token,
             'user': {
                 'username': user['username'],
                 'role': user['role']
@@ -109,15 +125,17 @@ def login():
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
-    session.clear()
     return jsonify({'success': True})
 
 @app.route('/api/me', methods=['GET'])
 def get_current_user():
-    if 'user_id' in session:
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if user_data:
         return jsonify({
-            'username': session['username'],
-            'role': session['role']
+            'username': user_data['username'],
+            'role': user_data['role']
         })
     return jsonify({'error': 'Not authenticated'}), 401
 
@@ -130,7 +148,10 @@ def get_kayitlar():
 
 @app.route('/api/kayitlar', methods=['POST'])
 def create_kayit():
-    if 'user_id' not in session or session['role'] != 'admin':
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
         return jsonify({'error': 'Yetkisiz işlem'}), 403
     
     data = request.json
@@ -156,22 +177,24 @@ def create_kayit():
 
 @app.route('/api/kayitlar/<int:id>', methods=['PUT'])
 def update_kayit(id):
-    if 'user_id' not in session:
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data:
         return jsonify({'error': 'Yetkisiz işlem'}), 403
     
     data = request.json
     conn = get_db()
     
     # Kullanıcı sadece not güncelleyebilir
-    if session['role'] == 'user':
+    if user_data['role'] == 'user':
         kayit = conn.execute('SELECT notlar FROM kayitlar WHERE id=?', (id,)).fetchone()
         if kayit:
             eski_not = kayit['notlar'] or ''
             yeni_not = data.get('notlar', '')
             
-            from datetime import datetime
             tarih = datetime.now().strftime('%Y-%m-%d %H:%M')
-            not_ekleme = f"\n[{session['username']} - {tarih}]: {yeni_not}"
+            not_ekleme = f"\n[{user_data['username']} - {tarih}]: {yeni_not}"
             
             guncel_not = eski_not + not_ekleme
             
@@ -181,7 +204,7 @@ def update_kayit(id):
             return jsonify({'success': True})
     
     # Admin tüm alanları güncelleyebilir
-    if session['role'] == 'admin':
+    if user_data['role'] == 'admin':
         conn.execute('''
             UPDATE kayitlar SET
                 bolum=?, teklif_no=?, musteri_ismi=?, teklif_tarihi=?, onay_tarihi=?,
@@ -205,7 +228,10 @@ def update_kayit(id):
 
 @app.route('/api/kayitlar/<int:id>', methods=['DELETE'])
 def delete_kayit(id):
-    if 'user_id' not in session or session['role'] != 'admin':
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
         return jsonify({'error': 'Yetkisiz işlem'}), 403
     
     conn = get_db()
