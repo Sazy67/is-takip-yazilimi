@@ -3,8 +3,6 @@ import axios from 'axios'
 import logo from '../rigel-logo.png'
 import './Login.css'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-axios.defaults.baseURL = API_URL
 axios.defaults.withCredentials = true
 
 function Login({ onLogin }) {
@@ -17,11 +15,11 @@ function Login({ onLogin }) {
     setError('')
 
     try {
-      const response = await axios.post('/api/login', { username, password }, {
-        withCredentials: true
-      })
+      const response = await axios.post('/api/login', { username, password })
       
       if (response.data.success) {
+        // Token'ı localStorage'a kaydet
+        localStorage.setItem('token', response.data.token)
         onLogin(response.data.user)
       }
     } catch (error) {
@@ -67,8 +65,6 @@ function Login({ onLogin }) {
         <div className="login-info">
           <p><strong>www.aksekiyapi.com</strong></p>
           <p><strong>www.rigelaluminyum.com</strong></p>
-         
-        
         </div>
       </div>
       <footer className="login-footer">

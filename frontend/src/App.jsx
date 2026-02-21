@@ -4,9 +4,16 @@ import Login from './Login'
 import logo from '../rigel-logo.png'
 import './App.css'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
-axios.defaults.baseURL = API_URL
 axios.defaults.withCredentials = true
+
+// Token'ı her istekte gönder
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
 
 function App() {
   const [user, setUser] = useState(null)
@@ -55,6 +62,7 @@ function App() {
 
   const handleLogout = async () => {
     await axios.post('/api/logout')
+    localStorage.removeItem('token')
     setUser(null)
     setKayitlar([])
   }
