@@ -245,5 +245,8 @@ def delete_kayit(id):
     return jsonify({'success': True})
 
 # Vercel için handler
-def handler(request):
-    return app(request)
+def handler(event, context):
+    return app(event, context)
+
+# Vercel için export
+app = app
