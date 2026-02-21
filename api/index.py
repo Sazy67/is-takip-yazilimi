@@ -8,7 +8,7 @@ import jwt
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
-CORS(app, supports_credentials=True, origins=['https://rigelistakip.vercel.app', 'http://localhost:5173'])
+CORS(app, supports_credentials=True, origins=['*'])
 
 # Vercel için veritabanı yolu
 DB_PATH = '/tmp/kayitlar.db'
@@ -243,10 +243,3 @@ def delete_kayit(id):
     conn.commit()
     conn.close()
     return jsonify({'success': True})
-
-# Vercel için handler
-def handler(event, context):
-    return app(event, context)
-
-# Vercel için export
-app = app
