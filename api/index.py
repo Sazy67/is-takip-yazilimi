@@ -55,32 +55,43 @@ def init_db():
         )
     ''')
     
-    # Varsayılan kullanıcılar
-    try:
-        cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", ('admin', 'admin123', 'admin'))
-        cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", ('user', 'user123', 'user'))
-    except:
-        pass
-    
-    # Örnek kayıtlar
-    try:
-        cur.execute('''
-            INSERT INTO kayitlar (
-                bolum, teklif_no, musteri_ismi, teklif_tarihi, onay_tarihi,
-                uretime_verilme_tarihi, uretim_numarasi, cam_siparis_tarihi,
-                cam_siparis_numarasi, cam_adedi, uretim_planlama_tarihi,
-                paketleme_tarihi, kasetleme_tarihi, sevk_tarihi, notlar
-            ) VALUES 
-            (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s),
-            (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ''', (
-            'Üretim', 'TK-2025-001', 'ABC İnşaat Ltd.', '2025-01-15', '2025-01-20', '2025-01-25', 'UR-001', '2025-01-22', 'CS-001', '50', '2025-01-28', '2025-02-05', '2025-02-08', '2025-02-10', 'İlk sipariş, öncelikli',
-            'Satış', 'TK-2025-002', 'XYZ Yapı A.Ş.', '2025-01-18', '2025-01-22', '2025-01-27', 'UR-002', '2025-01-25', 'CS-002', '75', '2025-02-01', '2025-02-08', '2025-02-12', '2025-02-15', 'Standart teslimat'
-        ))
-    except:
-        pass
-    
     conn.commit()
+    
+    # Varsayılan kullanıcıları kontrol et ve sadece yoksa ekle
+    cur.execute("SELECT COUNT(*) as count FROM users")
+    user_count = cur.fetchone()['count']
+    
+    if user_count == 0:
+        try:
+            cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", ('admin', 'admin123', 'admin'))
+            cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", ('user', 'user123', 'user'))
+            conn.commit()
+        except:
+            pass
+    
+    # Örnek kayıtları kontrol et ve sadece yoksa ekle
+    cur.execute("SELECT COUNT(*) as count FROM kayitlar")
+    kayit_count = cur.fetchone()['count']
+    
+    if kayit_count == 0:
+        try:
+            cur.execute('''
+                INSERT INTO kayitlar (
+                    bolum, teklif_no, musteri_ismi, teklif_tarihi, onay_tarihi,
+                    uretime_verilme_tarihi, uretim_numarasi, cam_siparis_tarihi,
+                    cam_siparis_numarasi, cam_adedi, uretim_planlama_tarihi,
+                    paketleme_tarihi, kasetleme_tarihi, sevk_tarihi, notlar
+                ) VALUES 
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s),
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                'Üretim', 'TK-2025-001', 'ABC İnşaat Ltd.', '2025-01-15', '2025-01-20', '2025-01-25', 'UR-001', '2025-01-22', 'CS-001', '50', '2025-01-28', '2025-02-05', '2025-02-08', '2025-02-10', 'İlk sipariş, öncelikli',
+                'Satış', 'TK-2025-002', 'XYZ Yapı A.Ş.', '2025-01-18', '2025-01-22', '2025-01-27', 'UR-002', '2025-01-25', 'CS-002', '75', '2025-02-01', '2025-02-08', '2025-02-12', '2025-02-15', 'Standart teslimat'
+            ))
+            conn.commit()
+        except:
+            pass
+    
     cur.close()
     conn.close()
 
