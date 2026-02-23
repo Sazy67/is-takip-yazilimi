@@ -1,15 +1,20 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify
 from flask_cors import CORS
-import sqlite3
-from datetime import datetime
+import os
+from datetime import datetime, timedelta
 import secrets
+import jwt
+import sqlite3
 
 app = Flask(__name__)
-app.secret_key = secrets.token_hex(16)
-CORS(app, supports_credentials=True)
+app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
+CORS(app, supports_credentials=True, origins=['*'])
+
+# SQLite veritabanı (Render'da kalıcı disk kullanacağız)
+DB_PATH = os.environ.get('DATABASE_PATH', 'kayitlar.db')
 
 def get_db():
-    conn = sqlite3.connect('kayitlar.db')
+    conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -46,34 +51,59 @@ def init_db():
         )
     ''')
     
-    # Varsayılan kullanıcılar ekle
-    try:
-        conn.execute("INSERT INTO users (username, password, role) VALUES ('admin', 'admin123', 'admin')")
-        conn.execute("INSERT INTO users (username, password, role) VALUES ('user', 'user123', 'user')")
-        conn.commit()
-    except:
-        pass
+    # Varsayılan kullanıcıları kontrol et
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) as count FROM users")
+    user_count = cur.fetchone()[0]
     
-    # Örnek kayıtlar ekle
-    try:
-        conn.execute('''
-            INSERT INTO kayitlar (
-                bolum, teklif_no, musteri_ismi, teklif_tarihi, onay_tarihi,
-                uretime_verilme_tarihi, uretim_numarasi, cam_siparis_tarihi,
-                cam_siparis_numarasi, cam_adedi, uretim_planlama_tarihi,
-                paketleme_tarihi, kasetleme_tarihi, sevk_tarihi, notlar
-            ) VALUES 
-            ('Üretim', 'TK-2025-001', 'ABC İnşaat Ltd.', '2025-01-15', '2025-01-20', '2025-01-25', 'UR-001', '2025-01-22', 'CS-001', '50', '2025-01-28', '2025-02-05', '2025-02-08', '2025-02-10', 'İlk sipariş, öncelikli'),
-            ('Satış', 'TK-2025-002', 'XYZ Yapı A.Ş.', '2025-01-18', '2025-01-22', '2025-01-27', 'UR-002', '2025-01-25', 'CS-002', '75', '2025-02-01', '2025-02-08', '2025-02-12', '2025-02-15', 'Standart teslimat'),
-            ('Proje', 'TK-2025-003', 'Mega Plaza AVM', '2025-01-20', '2025-01-25', '2025-02-01', 'UR-003', '2025-01-28', 'CS-003', '100', '2025-02-05', '2025-02-12', '2025-02-15', '2025-02-18', 'Büyük proje, dikkatli paketleme'),
-            ('Üretim', 'TK-2025-004', 'Güneş Enerji Ltd.', '2025-01-22', '2025-01-28', '2025-02-03', 'UR-004', '2025-01-30', 'CS-004', '60', '2025-02-08', '2025-02-15', '2025-02-18', '2025-02-20', 'Özel cam tipi'),
-            ('Satış', 'TK-2025-005', 'Yıldız Mobilya', '2025-01-25', '2025-02-01', '2025-02-05', 'UR-005', '2025-02-02', 'CS-005', '40', '2025-02-10', '2025-02-18', '2025-02-20', '2025-02-22', 'Acil teslimat gerekli')
-        ''')
-        conn.commit()
-    except:
-        pass
+    if user_count == 0:
+        try:
+            conn.execute("INSERT INTO users (username, password, role) VALUES ('admin', 'admin123', 'admin')")
+            conn.execute("INSERT INTO users (username, password, role) VALUES ('user', 'user123', 'user')")
+            conn.commit()
+        except:
+            pass
+    
+    # Örnek kayıtları kontrol et
+    cur.execute("SELECT COUNT(*) as count FROM kayitlar")
+    kayit_count = cur.fetchone()[0]
+    
+    if kayit_count == 0:
+        try:
+            conn.execute('''
+                INSERT INTO kayitlar (
+                    bolum, teklif_no, musteri_ismi, teklif_tarihi, onay_tarihi,
+                    uretime_verilme_tarihi, uretim_numarasi, cam_siparis_tarihi,
+                    cam_siparis_numarasi, cam_adedi, uretim_planlama_tarihi,
+                    paketleme_tarihi, kasetleme_tarihi, sevk_tarihi, notlar
+                ) VALUES 
+                ('Üretim', 'TK-2025-001', 'ABC İnşaat Ltd.', '2025-01-15', '2025-01-20', '2025-01-25', 'UR-001', '2025-01-22', 'CS-001', '50', '2025-01-28', '2025-02-05', '2025-02-08', '2025-02-10', 'İlk sipariş, öncelikli'),
+                ('Satış', 'TK-2025-002', 'XYZ Yapı A.Ş.', '2025-01-18', '2025-01-22', '2025-01-27', 'UR-002', '2025-01-25', 'CS-002', '75', '2025-02-01', '2025-02-08', '2025-02-12', '2025-02-15', 'Standart teslimat'),
+                ('Proje', 'TK-2025-003', 'Mega Plaza AVM', '2025-01-20', '2025-01-25', '2025-02-01', 'UR-003', '2025-01-28', 'CS-003', '100', '2025-02-05', '2025-02-12', '2025-02-15', '2025-02-18', 'Büyük proje, dikkatli paketleme'),
+                ('Üretim', 'TK-2025-004', 'Güneş Enerji Ltd.', '2025-01-22', '2025-01-28', '2025-02-03', 'UR-004', '2025-01-30', 'CS-004', '60', '2025-02-08', '2025-02-15', '2025-02-18', '2025-02-20', 'Özel cam tipi'),
+                ('Satış', 'TK-2025-005', 'Yıldız Mobilya', '2025-01-25', '2025-02-01', '2025-02-05', 'UR-005', '2025-02-02', 'CS-005', '40', '2025-02-10', '2025-02-18', '2025-02-20', '2025-02-22', 'Acil teslimat gerekli')
+            ''')
+            conn.commit()
+        except:
+            pass
     
     conn.close()
+
+def create_token(user_id, username, role):
+    payload = {
+        'user_id': user_id,
+        'username': username,
+        'role': role,
+        'exp': datetime.utcnow() + timedelta(days=7)
+    }
+    return jwt.encode(payload, app.secret_key, algorithm='HS256')
+
+def verify_token(token):
+    try:
+        payload = jwt.decode(token, app.secret_key, algorithms=['HS256'])
+        return payload
+    except:
+        return None
 
 @app.route('/api/login', methods=['POST'])
 def login():
@@ -87,11 +117,10 @@ def login():
     conn.close()
     
     if user:
-        session['user_id'] = user['id']
-        session['username'] = user['username']
-        session['role'] = user['role']
+        token = create_token(user['id'], user['username'], user['role'])
         return jsonify({
             'success': True,
+            'token': token,
             'user': {
                 'username': user['username'],
                 'role': user['role']
@@ -102,15 +131,17 @@ def login():
 
 @app.route('/api/logout', methods=['POST'])
 def logout():
-    session.clear()
     return jsonify({'success': True})
 
 @app.route('/api/me', methods=['GET'])
 def get_current_user():
-    if 'user_id' in session:
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if user_data:
         return jsonify({
-            'username': session['username'],
-            'role': session['role']
+            'username': user_data['username'],
+            'role': user_data['role']
         })
     return jsonify({'error': 'Not authenticated'}), 401
 
@@ -123,7 +154,10 @@ def get_kayitlar():
 
 @app.route('/api/kayitlar', methods=['POST'])
 def create_kayit():
-    if 'user_id' not in session or session['role'] != 'admin':
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
         return jsonify({'error': 'Yetkisiz işlem'}), 403
     
     data = request.json
@@ -149,24 +183,24 @@ def create_kayit():
 
 @app.route('/api/kayitlar/<int:id>', methods=['PUT'])
 def update_kayit(id):
-    if 'user_id' not in session:
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data:
         return jsonify({'error': 'Yetkisiz işlem'}), 403
     
     data = request.json
     conn = get_db()
     
     # Kullanıcı sadece not güncelleyebilir
-    if session['role'] == 'user':
-        # Mevcut notu al
+    if user_data['role'] == 'user':
         kayit = conn.execute('SELECT notlar FROM kayitlar WHERE id=?', (id,)).fetchone()
         if kayit:
             eski_not = kayit['notlar'] or ''
             yeni_not = data.get('notlar', '')
             
-            # Kullanıcı adını ve tarihi ekle
-            from datetime import datetime
             tarih = datetime.now().strftime('%Y-%m-%d %H:%M')
-            not_ekleme = f"\n[{session['username']} - {tarih}]: {yeni_not}"
+            not_ekleme = f"\n[{user_data['username']} - {tarih}]: {yeni_not}"
             
             guncel_not = eski_not + not_ekleme
             
@@ -176,7 +210,7 @@ def update_kayit(id):
             return jsonify({'success': True})
     
     # Admin tüm alanları güncelleyebilir
-    if session['role'] == 'admin':
+    if user_data['role'] == 'admin':
         conn.execute('''
             UPDATE kayitlar SET
                 bolum=?, teklif_no=?, musteri_ismi=?, teklif_tarihi=?, onay_tarihi=?,
@@ -200,7 +234,10 @@ def update_kayit(id):
 
 @app.route('/api/kayitlar/<int:id>', methods=['DELETE'])
 def delete_kayit(id):
-    if 'user_id' not in session or session['role'] != 'admin':
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
         return jsonify({'error': 'Yetkisiz işlem'}), 403
     
     conn = get_db()
@@ -211,4 +248,5 @@ def delete_kayit(id):
 
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
