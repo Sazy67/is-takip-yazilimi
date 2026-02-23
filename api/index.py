@@ -279,6 +279,7 @@ def delete_kayit(id):
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
+    """Database bağlantı kontrolü"""
     try:
         conn = get_db()
         cur = conn.cursor()
