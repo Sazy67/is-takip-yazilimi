@@ -276,3 +276,26 @@ def delete_kayit(id):
     cur.close()
     conn.close()
     return jsonify({'success': True})
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('SELECT COUNT(*) as count FROM kayitlar')
+        count = cur.fetchone()['count']
+        cur.close()
+        conn.close()
+        return jsonify({
+            'status': 'ok',
+            'database': 'connected',
+            'kayit_count': count,
+            'postgres_url_set': bool(os.environ.get('POSTGRES_URL'))
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'database': 'disconnected',
+            'error': str(e),
+            'postgres_url_set': bool(os.environ.get('POSTGRES_URL'))
+        }), 500
