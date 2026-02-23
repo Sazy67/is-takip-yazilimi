@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
 from datetime import datetime, timedelta
@@ -6,7 +6,7 @@ import secrets
 import jwt
 import sqlite3
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../frontend/dist', static_url_path='')
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 CORS(app, supports_credentials=True, origins=['*'])
 
@@ -246,7 +246,23 @@ def delete_kayit(id):
     conn.close()
     return jsonify({'success': True})
 
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve(path):
+    if path != "" and os.path.exists(app.static_folder + '/' + path):
+        return send_from_directory(app.static_folder, path)
+    else:
+        return send_from_directory(app.static_folder, 'index.html')
+
 if __name__ == '__main__':
     init_db()
     port = int(os.environ.get('PORT', 5000))
+    print(f"\n{'='*50}")
+    print(f"İş Takip Yazılımı Başlatılıyor...")
+    print(f"{'='*50}")
+    print(f"\nUygulama adresi: http://localhost:{port}")
+    print(f"\nKullanıcılar:")
+    print(f"  Admin: admin / admin123")
+    print(f"  User:  user / user123")
+    print(f"\n{'='*50}\n")
     app.run(host='0.0.0.0', port=port, debug=False)
