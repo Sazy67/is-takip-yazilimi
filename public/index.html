@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İş Takip Yazılımı</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .login-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .login-logo img {
+            max-width: 150px;
+            height: auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .login-info {
+            margin-top: 30px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .login-info p {
+            margin: 5px 0;
+        }
+
+        .login-footer {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 14px;
+        }
+
+        .container {
+            display: none;
+            padding: 20px;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+
+        .app-header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .app-logo {
+            height: 50px;
+        }
+
+        .header-left h1 {
+            color: #333;
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .user-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            padding: 10px 20px;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .content-area {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1200px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .notlar-cell {
+            max-width: 300px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .app-footer {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <div class="login-logo">
+                <img src="/rigel-logo.png" alt="Rigel Logo">
+            </div>
+            <h1>İş Takip Yazılımı</h1>
+            <h2>Giriş Yap</h2>
+            
+            <div id="loginError" class="error-message hidden"></div>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Kullanıcı Adı</label>
+                    <input type="text" id="username" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Şifre</label>
+                    <input type="password" id="password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Giriş Yap</button>
+            </form>
+            
+            <div class="login-info">
+                <p><strong>www.aksekiyapi.com</strong></p>
+                <p><strong>www.rigelaluminyum.com</strong></p>
+            </div>
+        </div>
+        <footer class="login-footer">
+            © 2025 Kamsis@Software. Tüm hakları saklıdır.
+        </footer>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="container">
+        <div class="app-header">
+            <div class="header-section">
+                <div class="header-left">
+                    <img src="/rigel-logo.png" alt="Rigel Logo" class="app-logo">
+                    <h1>İş Takip Yazılımı</h1>
+                </div>
+                <div class="user-info">
+                    <div class="user-badge" id="userBadge"></div>
+                    <button id="newRecordBtn" class="btn btn-primary hidden">+ Yeni Kayıt</button>
+                    <button id="logoutBtn" class="btn btn-secondary">Çıkış</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <!-- Form Section -->
+            <div id="formSection" class="form-section hidden">
+                <h2 id="formTitle">Yeni Kayıt</h2>
+                <form id="kayitForm">
+                    <div class="form-grid" id="adminForm">
+                        <!-- Admin form fields will be inserted here -->
+                    </div>
+                    <div id="userForm" class="hidden">
+                        <div class="form-group full-width">
+                            <label>Yeni Not</label>
+                            <textarea id="notInput" placeholder="Notunuzu yazın..." required></textarea>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-success" id="submitBtn">Kaydet</button>
+                        <button type="button" id="cancelBtn" class="btn btn-secondary">İptal</button>
+                    </div>
+                </form>
+            </div>
+
+            <input type="text" id="searchBox" class="search-box" placeholder="Ara...">
+
+            <div class="table-container">
+                <div id="loading" class="loading">Yükleniyor...</div>
+                <table id="kayitTable" class="hidden">
+                    <thead>
+                        <tr>
+                            <th>Bölüm</th>
+                            <th>Teklif No</th>
+                            <th>Müşteri</th>
+                            <th>Teklif Tarihi</th>
+                            <th>Onay Tarihi</th>
+                            <th>Üretime Verilme</th>
+                            <th>Üretim No</th>
+                            <th>Cam Sipariş</th>
+                            <th>Cam Sipariş No</th>
+                            <th>Cam Adedi</th>
+                            <th>Üretim Planlama</th>
+                            <th>Paketleme</th>
+                            <th>Kasetleme</th>
+                            <th>Sevk</th>
+                            <th>Notlar</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kayitTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <footer class="app-footer">
+            © 2025 Kamsis@Software. Tüm hakları saklıdır.
+        </footer>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>

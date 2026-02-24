@@ -1,93 +1,105 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 from datetime import datetime, timedelta
 import secrets
 import jwt
-import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
 CORS(app, supports_credentials=True, origins=['*'])
 
-# SQLite veritabanı (Render'da kalıcı disk kullanacağız)
-DB_PATH = os.environ.get('DATABASE_PATH', 'kayitlar.db')
+# Neon Postgres bağlantısı
+DATABASE_URL = os.environ.get('POSTGRES_URL')
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
+    conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
     return conn
 
 def init_db():
     conn = get_db()
-    conn.execute('''
+    cur = conn.cursor()
+    
+    # Users tablosu
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(50) UNIQUE NOT NULL,
+            password VARCHAR(100) NOT NULL,
+            role VARCHAR(20) NOT NULL
+        )
+    ''')
+    
+    # Kayitlar tablosu
+    cur.execute('''
         CREATE TABLE IF NOT EXISTS kayitlar (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            bolum TEXT,
-            teklif_no TEXT,
-            musteri_ismi TEXT,
-            teklif_tarihi TEXT,
-            onay_tarihi TEXT,
-            uretime_verilme_tarihi TEXT,
-            uretim_numarasi TEXT,
-            cam_siparis_tarihi TEXT,
-            cam_siparis_numarasi TEXT,
-            cam_adedi TEXT,
-            uretim_planlama_tarihi TEXT,
-            paketleme_tarihi TEXT,
-            kasetleme_tarihi TEXT,
-            sevk_tarihi TEXT,
+            id SERIAL PRIMARY KEY,
+            bolum VARCHAR(100),
+            teklif_no VARCHAR(50),
+            musteri_ismi VARCHAR(200),
+            teklif_tarihi DATE,
+            onay_tarihi DATE,
+            uretime_verilme_tarihi DATE,
+            uretim_numarasi VARCHAR(50),
+            cam_siparis_tarihi DATE,
+            cam_siparis_numarasi VARCHAR(50),
+            cam_adedi VARCHAR(50),
+            uretim_planlama_tarihi DATE,
+            paketleme_tarihi DATE,
+            kasetleme_tarihi DATE,
+            sevk_tarihi DATE,
             notlar TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     
-    conn.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL
-        )
-    ''')
+    conn.commit()
     
-    # Varsayılan kullanıcıları kontrol et
-    cur = conn.cursor()
+    # Varsayılan kullanıcıları kontrol et ve sadece yoksa ekle
     cur.execute("SELECT COUNT(*) as count FROM users")
-    user_count = cur.fetchone()[0]
+    user_count = cur.fetchone()['count']
     
     if user_count == 0:
         try:
-            conn.execute("INSERT INTO users (username, password, role) VALUES ('admin', 'admin123', 'admin')")
-            conn.execute("INSERT INTO users (username, password, role) VALUES ('user', 'user123', 'user')")
+            cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", ('admin', 'admin123', 'admin'))
+            cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s)", ('user', 'user123', 'user'))
             conn.commit()
         except:
             pass
     
-    # Örnek kayıtları kontrol et
+    # Örnek kayıtları kontrol et ve sadece yoksa ekle
     cur.execute("SELECT COUNT(*) as count FROM kayitlar")
-    kayit_count = cur.fetchone()[0]
+    kayit_count = cur.fetchone()['count']
     
     if kayit_count == 0:
         try:
-            conn.execute('''
+            cur.execute('''
                 INSERT INTO kayitlar (
                     bolum, teklif_no, musteri_ismi, teklif_tarihi, onay_tarihi,
                     uretime_verilme_tarihi, uretim_numarasi, cam_siparis_tarihi,
                     cam_siparis_numarasi, cam_adedi, uretim_planlama_tarihi,
                     paketleme_tarihi, kasetleme_tarihi, sevk_tarihi, notlar
                 ) VALUES 
-                ('Üretim', 'TK-2025-001', 'ABC İnşaat Ltd.', '2025-01-15', '2025-01-20', '2025-01-25', 'UR-001', '2025-01-22', 'CS-001', '50', '2025-01-28', '2025-02-05', '2025-02-08', '2025-02-10', 'İlk sipariş, öncelikli'),
-                ('Satış', 'TK-2025-002', 'XYZ Yapı A.Ş.', '2025-01-18', '2025-01-22', '2025-01-27', 'UR-002', '2025-01-25', 'CS-002', '75', '2025-02-01', '2025-02-08', '2025-02-12', '2025-02-15', 'Standart teslimat'),
-                ('Proje', 'TK-2025-003', 'Mega Plaza AVM', '2025-01-20', '2025-01-25', '2025-02-01', 'UR-003', '2025-01-28', 'CS-003', '100', '2025-02-05', '2025-02-12', '2025-02-15', '2025-02-18', 'Büyük proje, dikkatli paketleme'),
-                ('Üretim', 'TK-2025-004', 'Güneş Enerji Ltd.', '2025-01-22', '2025-01-28', '2025-02-03', 'UR-004', '2025-01-30', 'CS-004', '60', '2025-02-08', '2025-02-15', '2025-02-18', '2025-02-20', 'Özel cam tipi'),
-                ('Satış', 'TK-2025-005', 'Yıldız Mobilya', '2025-01-25', '2025-02-01', '2025-02-05', 'UR-005', '2025-02-02', 'CS-005', '40', '2025-02-10', '2025-02-18', '2025-02-20', '2025-02-22', 'Acil teslimat gerekli')
-            ''')
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s),
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                'Üretim', 'TK-2025-001', 'ABC İnşaat Ltd.', '2025-01-15', '2025-01-20', '2025-01-25', 'UR-001', '2025-01-22', 'CS-001', '50', '2025-01-28', '2025-02-05', '2025-02-08', '2025-02-10', 'İlk sipariş, öncelikli',
+                'Satış', 'TK-2025-002', 'XYZ Yapı A.Ş.', '2025-01-18', '2025-01-22', '2025-01-27', 'UR-002', '2025-01-25', 'CS-002', '75', '2025-02-01', '2025-02-08', '2025-02-12', '2025-02-15', 'Standart teslimat'
+            ))
             conn.commit()
         except:
             pass
     
+    cur.close()
     conn.close()
+
+# İlk çalıştırmada tabloları oluştur
+try:
+    init_db()
+except:
+    pass
 
 def create_token(user_id, username, role):
     payload = {
@@ -112,8 +124,10 @@ def login():
     password = data.get('password')
     
     conn = get_db()
-    user = conn.execute('SELECT * FROM users WHERE username=? AND password=?', 
-                       (username, password)).fetchone()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM users WHERE username=%s AND password=%s', (username, password))
+    user = cur.fetchone()
+    cur.close()
     conn.close()
     
     if user:
@@ -148,9 +162,12 @@ def get_current_user():
 @app.route('/api/kayitlar', methods=['GET'])
 def get_kayitlar():
     conn = get_db()
-    kayitlar = conn.execute('SELECT * FROM kayitlar ORDER BY id DESC').fetchall()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM kayitlar ORDER BY id DESC')
+    kayitlar = cur.fetchall()
+    cur.close()
     conn.close()
-    return jsonify([dict(k) for k in kayitlar])
+    return jsonify(kayitlar)
 
 @app.route('/api/kayitlar', methods=['POST'])
 def create_kayit():
@@ -162,13 +179,16 @@ def create_kayit():
     
     data = request.json
     conn = get_db()
-    cursor = conn.execute('''
+    cur = conn.cursor()
+    
+    cur.execute('''
         INSERT INTO kayitlar (
             bolum, teklif_no, musteri_ismi, teklif_tarihi, onay_tarihi,
             uretime_verilme_tarihi, uretim_numarasi, cam_siparis_tarihi,
             cam_siparis_numarasi, cam_adedi, uretim_planlama_tarihi,
             paketleme_tarihi, kasetleme_tarihi, sevk_tarihi, notlar
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
     ''', (
         data.get('bolum'), data.get('teklif_no'), data.get('musteri_ismi'),
         data.get('teklif_tarihi'), data.get('onay_tarihi'), data.get('uretime_verilme_tarihi'),
@@ -176,9 +196,12 @@ def create_kayit():
         data.get('cam_adedi'), data.get('uretim_planlama_tarihi'), data.get('paketleme_tarihi'),
         data.get('kasetleme_tarihi'), data.get('sevk_tarihi'), data.get('notlar')
     ))
+    
+    kayit_id = cur.fetchone()['id']
     conn.commit()
-    kayit_id = cursor.lastrowid
+    cur.close()
     conn.close()
+    
     return jsonify({'id': kayit_id}), 201
 
 @app.route('/api/kayitlar/<int:id>', methods=['PUT'])
@@ -191,10 +214,13 @@ def update_kayit(id):
     
     data = request.json
     conn = get_db()
+    cur = conn.cursor()
     
     # Kullanıcı sadece not güncelleyebilir
     if user_data['role'] == 'user':
-        kayit = conn.execute('SELECT notlar FROM kayitlar WHERE id=?', (id,)).fetchone()
+        cur.execute('SELECT notlar FROM kayitlar WHERE id=%s', (id,))
+        kayit = cur.fetchone()
+        
         if kayit:
             eski_not = kayit['notlar'] or ''
             yeni_not = data.get('notlar', '')
@@ -204,20 +230,21 @@ def update_kayit(id):
             
             guncel_not = eski_not + not_ekleme
             
-            conn.execute('UPDATE kayitlar SET notlar=? WHERE id=?', (guncel_not, id))
+            cur.execute('UPDATE kayitlar SET notlar=%s WHERE id=%s', (guncel_not, id))
             conn.commit()
+            cur.close()
             conn.close()
             return jsonify({'success': True})
     
     # Admin tüm alanları güncelleyebilir
     if user_data['role'] == 'admin':
-        conn.execute('''
+        cur.execute('''
             UPDATE kayitlar SET
-                bolum=?, teklif_no=?, musteri_ismi=?, teklif_tarihi=?, onay_tarihi=?,
-                uretime_verilme_tarihi=?, uretim_numarasi=?, cam_siparis_tarihi=?,
-                cam_siparis_numarasi=?, cam_adedi=?, uretim_planlama_tarihi=?,
-                paketleme_tarihi=?, kasetleme_tarihi=?, sevk_tarihi=?, notlar=?
-            WHERE id=?
+                bolum=%s, teklif_no=%s, musteri_ismi=%s, teklif_tarihi=%s, onay_tarihi=%s,
+                uretime_verilme_tarihi=%s, uretim_numarasi=%s, cam_siparis_tarihi=%s,
+                cam_siparis_numarasi=%s, cam_adedi=%s, uretim_planlama_tarihi=%s,
+                paketleme_tarihi=%s, kasetleme_tarihi=%s, sevk_tarihi=%s, notlar=%s
+            WHERE id=%s
         ''', (
             data.get('bolum'), data.get('teklif_no'), data.get('musteri_ismi'),
             data.get('teklif_tarihi'), data.get('onay_tarihi'), data.get('uretime_verilme_tarihi'),
@@ -226,9 +253,11 @@ def update_kayit(id):
             data.get('kasetleme_tarihi'), data.get('sevk_tarihi'), data.get('notlar'), id
         ))
         conn.commit()
+        cur.close()
         conn.close()
         return jsonify({'success': True})
     
+    cur.close()
     conn.close()
     return jsonify({'error': 'Yetkisiz işlem'}), 403
 
@@ -241,25 +270,9 @@ def delete_kayit(id):
         return jsonify({'error': 'Yetkisiz işlem'}), 403
     
     conn = get_db()
-    conn.execute('DELETE FROM kayitlar WHERE id=?', (id,))
+    cur = conn.cursor()
+    cur.execute('DELETE FROM kayitlar WHERE id=%s', (id,))
     conn.commit()
+    cur.close()
     conn.close()
     return jsonify({'success': True})
-
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve(path):
-    return render_template('index.html')
-
-if __name__ == '__main__':
-    init_db()
-    port = int(os.environ.get('PORT', 5000))
-    print(f"\n{'='*50}")
-    print(f"İş Takip Yazılımı Başlatılıyor...")
-    print(f"{'='*50}")
-    print(f"\nUygulama adresi: http://localhost:{port}")
-    print(f"\nKullanıcılar:")
-    print(f"  Admin: admin / admin123")
-    print(f"  User:  user / user123")
-    print(f"\n{'='*50}\n")
-    app.run(host='0.0.0.0', port=port, debug=False)
