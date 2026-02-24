@@ -336,7 +336,9 @@ function showLoginScreen() {
 
 function showMainApp() {
     document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
+    const mainApp = document.getElementById('mainApp');
+    mainApp.style.display = 'flex';
+    mainApp.classList.remove('hidden');
     
     document.getElementById('userBadge').textContent = currentUser.role === 'admin' ? 'Admin' : 'User';
     
