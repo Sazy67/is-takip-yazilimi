@@ -125,17 +125,17 @@ function renderKayitlar(kayitlar) {
             <td>${kayit.bolum || ''}</td>
             <td>${kayit.teklif_no || ''}</td>
             <td>${kayit.musteri_ismi || ''}</td>
-            <td>${kayit.teklif_tarihi || ''}</td>
-            <td>${kayit.onay_tarihi || ''}</td>
-            <td>${kayit.uretime_verilme_tarihi || ''}</td>
+            <td>${formatDate(kayit.teklif_tarihi)}</td>
+            <td>${formatDate(kayit.onay_tarihi)}</td>
+            <td>${formatDate(kayit.uretime_verilme_tarihi)}</td>
             <td>${kayit.uretim_numarasi || ''}</td>
-            <td>${kayit.cam_siparis_tarihi || ''}</td>
+            <td>${formatDate(kayit.cam_siparis_tarihi)}</td>
             <td>${kayit.cam_siparis_numarasi || ''}</td>
             <td>${kayit.cam_adedi || ''}</td>
-            <td>${kayit.uretim_planlama_tarihi || ''}</td>
-            <td>${kayit.paketleme_tarihi || ''}</td>
-            <td>${kayit.kasetleme_tarihi || ''}</td>
-            <td>${kayit.sevk_tarihi || ''}</td>
+            <td>${formatDate(kayit.uretim_planlama_tarihi)}</td>
+            <td>${formatDate(kayit.paketleme_tarihi)}</td>
+            <td>${formatDate(kayit.kasetleme_tarihi)}</td>
+            <td>${formatDate(kayit.sevk_tarihi)}</td>
             <td class="notlar-cell">${kayit.notlar || ''}</td>
             <td class="actions">
                 <button onclick="editKayit(${kayit.id})" class="btn btn-success">
@@ -147,6 +147,15 @@ function renderKayitlar(kayitlar) {
             </td>
         </tr>
     `).join('');
+}
+
+function formatDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
 }
 
 function showNewRecordForm() {
@@ -265,15 +274,15 @@ function getAdminFormHTML(kayit = {}) {
         </div>
         <div class="form-group">
             <label>Teklif Tarihi</label>
-            <input type="date" id="teklif_tarihi" value="${kayit.teklif_tarihi || ''}">
+            <input type="date" id="teklif_tarihi" value="${formatDateForInput(kayit.teklif_tarihi)}">
         </div>
         <div class="form-group">
             <label>Onay Tarihi</label>
-            <input type="date" id="onay_tarihi" value="${kayit.onay_tarihi || ''}">
+            <input type="date" id="onay_tarihi" value="${formatDateForInput(kayit.onay_tarihi)}">
         </div>
         <div class="form-group">
             <label>Üretime Verilme Tarihi</label>
-            <input type="date" id="uretime_verilme_tarihi" value="${kayit.uretime_verilme_tarihi || ''}">
+            <input type="date" id="uretime_verilme_tarihi" value="${formatDateForInput(kayit.uretime_verilme_tarihi)}">
         </div>
         <div class="form-group">
             <label>Üretim Numarası</label>
@@ -281,7 +290,7 @@ function getAdminFormHTML(kayit = {}) {
         </div>
         <div class="form-group">
             <label>Cam Sipariş Tarihi</label>
-            <input type="date" id="cam_siparis_tarihi" value="${kayit.cam_siparis_tarihi || ''}">
+            <input type="date" id="cam_siparis_tarihi" value="${formatDateForInput(kayit.cam_siparis_tarihi)}">
         </div>
         <div class="form-group">
             <label>Cam Sipariş Numarası</label>
@@ -293,25 +302,37 @@ function getAdminFormHTML(kayit = {}) {
         </div>
         <div class="form-group">
             <label>Üretim Planlama Tarihi</label>
-            <input type="date" id="uretim_planlama_tarihi" value="${kayit.uretim_planlama_tarihi || ''}">
+            <input type="date" id="uretim_planlama_tarihi" value="${formatDateForInput(kayit.uretim_planlama_tarihi)}">
         </div>
         <div class="form-group">
             <label>Paketleme Tarihi</label>
-            <input type="date" id="paketleme_tarihi" value="${kayit.paketleme_tarihi || ''}">
+            <input type="date" id="paketleme_tarihi" value="${formatDateForInput(kayit.paketleme_tarihi)}">
         </div>
         <div class="form-group">
             <label>Kasetleme Tarihi</label>
-            <input type="date" id="kasetleme_tarihi" value="${kayit.kasetleme_tarihi || ''}">
+            <input type="date" id="kasetleme_tarihi" value="${formatDateForInput(kayit.kasetleme_tarihi)}">
         </div>
         <div class="form-group">
             <label>Sevk Tarihi</label>
-            <input type="date" id="sevk_tarihi" value="${kayit.sevk_tarihi || ''}">
+            <input type="date" id="sevk_tarihi" value="${formatDateForInput(kayit.sevk_tarihi)}">
         </div>
         <div class="form-group full-width">
             <label>Notlar</label>
             <textarea id="notlar">${kayit.notlar || ''}</textarea>
         </div>
     `;
+}
+
+function formatDateForInput(dateStr) {
+    if (!dateStr) return '';
+    // Eğer zaten YYYY-MM-DD formatındaysa direkt döndür
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) return dateStr;
+    // Değilse parse et ve formatla
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function hideForm() {
