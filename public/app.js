@@ -152,10 +152,12 @@ function renderKayitlar(kayitlar) {
 function formatDate(dateStr) {
     if (!dateStr) return '';
     const date = new Date(dateStr);
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = date.getDate();
+    const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
+                    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    const month = months[date.getMonth()];
     const year = date.getFullYear();
-    return `${day}.${month}.${year}`;
+    return `${day} ${month} ${year}`;
 }
 
 function showNewRecordForm() {
