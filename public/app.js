@@ -207,6 +207,12 @@ function editKayit(id) {
         notInput.disabled = false;
         notInput.readOnly = false;
         document.getElementById('submitBtn').textContent = 'Not Ekle';
+        
+        // Textarea'ya focus et ve scroll yap
+        setTimeout(() => {
+            notInput.focus();
+            notInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
     } else {
         document.getElementById('formTitle').textContent = 'Kayıt Düzenle';
         document.getElementById('adminForm').innerHTML = getAdminFormHTML(kayit);
