@@ -203,14 +203,17 @@ function editKayit(id) {
         document.getElementById('userForm').classList.remove('hidden');
         const notInput = document.getElementById('notInput');
         notInput.value = '';
-        notInput.required = true;
+        notInput.required = false; // Required'ı kaldır
         notInput.disabled = false;
         notInput.readOnly = false;
+        notInput.removeAttribute('disabled');
+        notInput.removeAttribute('readonly');
         document.getElementById('submitBtn').textContent = 'Not Ekle';
         
         // Textarea'ya focus et ve scroll yap
         setTimeout(() => {
             notInput.focus();
+            notInput.click(); // Tıklama simüle et
             notInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
     } else {
