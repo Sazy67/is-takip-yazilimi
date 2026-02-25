@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Textarea Test</title>
+</head>
+<body>
+    <h1>Textarea Test</h1>
+    <form>
+        <label for="notInput">Not:</label><br>
+        <textarea id="notInput" name="notInput" rows="6" cols="50" placeholder="Buraya yazın..."></textarea><br>
+        <button type="submit">Gönder</button>
+    </form>
+    
+    <script>
+        document.querySelector('form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Not: ' + document.getElementById('notInput').value);
+        });
+    </script>
+</body>
+</html>

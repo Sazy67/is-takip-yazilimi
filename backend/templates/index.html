@@ -457,7 +457,7 @@
     <div id="loginScreen" class="login-container">
         <div class="login-box">
             <div class="login-logo">
-                <img src="/static/rigel-logo.png" alt="Rigel Logo">
+                <img src="/rigel-logo.png" alt="Rigel Logo">
             </div>
             <h1>İş Takip Yazılımı</h1>
             <h2>Giriş Yap</h2>
@@ -494,7 +494,7 @@
             <div class="header-section">
                 <div class="header-left">
                     <a href="/" style="display: flex; align-items: center; text-decoration: none;">
-                        <img src="/static/rigel-logo.png" alt="Rigel Logo" class="app-logo">
+                        <img src="/rigel-logo.png" alt="Rigel Logo" class="app-logo">
                     </a>
                     <h1>İş Takip Yazılımı</h1>
                 </div>
@@ -567,9 +567,9 @@
                     <div class="form-grid" id="adminForm">
                         <!-- Admin form fields will be inserted here -->
                     </div>
-                    <div id="userForm" style="display: none;">
+                    <div id="userForm" style="display: none; position: relative; z-index: 9999;">
                         <label for="notInput" style="display: block; margin-bottom: 10px; font-weight: bold; color: #333; font-size: 16px;">Yeni Not:</label>
-                        <textarea id="notInput" name="notInput" rows="6" placeholder="Notunuzu buraya yazın..." style="width: 100%; padding: 15px; border: 2px solid #667eea; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                        <textarea id="notInput" name="notInput" rows="6" placeholder="Notunuzu buraya yazın..." style="width: 100%; padding: 15px; border: 2px solid #667eea; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box; position: relative; z-index: 9999; pointer-events: auto;"></textarea>
                     </div>
                     <div>
                         <button type="submit" class="btn btn-success" id="submitBtn">Kaydet</button>
@@ -615,6 +615,6 @@
         </footer>
     </div>
 
-    <script src="/static/app.js"></script>
+    <script src="/app.js"></script>
 </body>
 </html>

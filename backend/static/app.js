@@ -153,14 +153,14 @@ function renderKayitlar(kayitlar) {
                     onchange="updateCheckbox(${kayit.id}, 'imalat_durumu', this.checked)"
                     ${currentUser.role !== 'admin' ? 'disabled' : ''}>
             </td>
-            <td class="notlar-cell">${kayit.notlar || ''}</td>
+            <td class="notlar-cell" id="notlar-${kayit.id}">${kayit.notlar || ''}</td>
             <td class="actions">
-                <button onclick="editKayit(${kayit.id})" class="btn btn-success">
-                    ${currentUser.role === 'admin' ? 'Düzenle' : 'Not Ekle'}
-                </button>
                 ${currentUser.role === 'admin' ? `
+                    <button onclick="editKayit(${kayit.id})" class="btn btn-success">Düzenle</button>
                     <button onclick="deleteKayit(${kayit.id})" class="btn btn-danger">Sil</button>
-                ` : ''}
+                ` : `
+                    <button onclick="addNoteInline(${kayit.id})" class="btn btn-success" title="Not Ekle">+</button>
+                `}
             </td>
         </tr>
     `).join('');
@@ -585,6 +585,59 @@ async function deleteUser(id) {
 function hideUserForm() {
     document.getElementById('userFormSection').classList.add('hidden');
     editingUserId = null;
+}
+
+async function addNoteInline(id) {
+    const kayit = allKayitlar.find(k => k.id === id);
+    if (!kayit) return;
+    
+    const notlarCell = document.getElementById(`notlar-${id}`);
+    const currentNot = kayit.notlar || '';
+    
+    // Input alanı oluştur
+    notlarCell.innerHTML = `
+        <textarea id="noteInput-${id}" style="width: 100%; min-height: 60px; padding: 5px; border: 2px solid #667eea; border-radius: 4px; font-size: 12px;"
+            placeholder="Notunuzu yazın..."></textarea>
+        <div style="margin-top: 5px;">
+            <button onclick="saveNoteInline(${id})" class="btn btn-success" style="padding: 3px 8px; font-size: 10px;">Kaydet</button>
+            <button onclick="cancelNoteInline(${id})" class="btn btn-secondary" style="padding: 3px 8px; font-size: 10px;">İptal</button>
+        </div>
+    `;
+    
+    document.getElementById(`noteInput-${id}`).focus();
+}
+
+async function saveNoteInline(id) {
+    const noteInput = document.getElementById(`noteInput-${id}`);
+    const yeniNot = noteInput.value.trim();
+    
+    if (!yeniNot) {
+        alert('Lütfen bir not yazın!');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/kayitlar/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ notlar: yeniNot })
+        });
+        
+        if (response.ok) {
+            fetchKayitlar();
+        } else {
+            alert('Not eklenirken hata oluştu');
+        }
+    } catch (error) {
+        alert('Bağlantı hatası');
+    }
+}
+
+function cancelNoteInline(id) {
+    fetchKayitlar();
 }
 
 async function updateCheckbox(id, field, value) {
