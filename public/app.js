@@ -166,6 +166,9 @@ function showNewRecordForm() {
     document.getElementById('adminForm').innerHTML = getAdminFormHTML();
     document.getElementById('adminForm').classList.remove('hidden');
     document.getElementById('userForm').classList.add('hidden');
+    // User form'daki required'ı kaldır
+    const notInput = document.getElementById('notInput');
+    if (notInput) notInput.removeAttribute('required');
     document.getElementById('submitBtn').textContent = 'Kaydet';
     document.getElementById('formSection').classList.remove('hidden');
 }
@@ -181,13 +184,17 @@ function editKayit(id) {
         document.getElementById('formTitle').textContent = 'Not Ekle';
         document.getElementById('adminForm').classList.add('hidden');
         document.getElementById('userForm').classList.remove('hidden');
-        document.getElementById('notInput').value = '';
+        const notInput = document.getElementById('notInput');
+        notInput.value = '';
+        notInput.setAttribute('required', 'required');
         document.getElementById('submitBtn').textContent = 'Not Ekle';
     } else {
         document.getElementById('formTitle').textContent = 'Kayıt Düzenle';
         document.getElementById('adminForm').innerHTML = getAdminFormHTML(kayit);
         document.getElementById('adminForm').classList.remove('hidden');
         document.getElementById('userForm').classList.add('hidden');
+        const notInput = document.getElementById('notInput');
+        if (notInput) notInput.removeAttribute('required');
         document.getElementById('submitBtn').textContent = 'Güncelle';
     }
 }
