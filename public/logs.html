@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Logları</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filters input, .filters select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .filters input {
+            flex: 1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .action-login { color: #28a745; font-weight: 600; }
+        .action-add { color: #007bff; font-weight: 600; }
+        .action-edit { color: #ffc107; font-weight: 600; }
+        .action-delete { color: #dc3545; font-weight: 600; }
+        .action-failed { color: #dc3545; font-weight: 600; }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Sistem Aktivite Logları</h1>
+        <p style="color: #666; margin-bottom: 30px;">Son 500 aktivite kaydı</p>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3 id="totalLogs">0</h3>
+                <p>Toplam Log</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="todayLogs">0</h3>
+                <p>Bugün</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="uniqueUsers">0</h3>
+                <p>Aktif Kullanıcı</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="failedLogins">0</h3>
+                <p>Başarısız Giriş</p>
+            </div>
+        </div>
+
+        <div class="filters">
+            <input type="text" id="searchBox" placeholder="Kullanıcı adı, aksiyon veya detay ara...">
+            <select id="actionFilter">
+                <option value="">Tüm Aksiyonlar</option>
+                <option value="Giriş Yaptı">Giriş Yaptı</option>
+                <option value="Başarısız Giriş">Başarısız Giriş</option>
+                <option value="Kayıt Ekledi">Kayıt Ekledi</option>
+                <option value="Kayıt Güncelledi">Kayıt Güncelledi</option>
+                <option value="Kayıt Sildi">Kayıt Sildi</option>
+                <option value="Not Ekledi">Not Ekledi</option>
+                <option value="Kullanıcı Oluşturdu">Kullanıcı Oluşturdu</option>
+                <option value="Kullanıcı Güncelledi">Kullanıcı Güncelledi</option>
+                <option value="Kullanıcı Sildi">Kullanıcı Sildi</option>
+            </select>
+        </div>
+
+        <div class="table-container">
+            <div id="loading" class="loading">Yükleniyor...</div>
+            <table id="logsTable" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Tarih/Saat</th>
+                        <th>Kullanıcı</th>
+                        <th>Aksiyon</th>
+                        <th>Detaylar</th>
+                        <th>IP Adresi</th>
+                    </tr>
+                </thead>
+                <tbody id="logsTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let allLogs = [];
+
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/api/secret-logs-x9k2p7m4?key=suat2025');
+                if (!response.ok) {
+                    document.getElementById('loading').textContent = 'Erişim reddedildi!';
+                    return;
+                }
+                allLogs = await response.json();
+                calculateStats();
+                renderLogs(allLogs);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('logsTable').style.display = 'table';
+            } catch (error) {
+                document.getElementById('loading').textContent = 'Yükleme hatası!';
+            }
+        }
+
+        function calculateStats() {
+            document.getElementById('totalLogs').textContent = allLogs.length;
+            
+            const today = new Date().toISOString().split('T')[0];
+            const todayLogs = allLogs.filter(log => log.created_at.startsWith(today));
+            document.getElementById('todayLogs').textContent = todayLogs.length;
+            
+            const uniqueUsers = new Set(allLogs.map(log => log.username)).size;
+            document.getElementById('uniqueUsers').textContent = uniqueUsers;
+            
+            const failedLogins = allLogs.filter(log => log.action.includes('Başarısız')).length;
+            document.getElementById('failedLogins').textContent = failedLogins;
+        }
+
+        function renderLogs(logs) {
+            const tbody = document.getElementById('logsTableBody');
+            tbody.innerHTML = logs.map(log => {
+                const date = new Date(log.created_at);
+                const formattedDate = date.toLocaleString('tr-TR');
+                
+                let actionClass = '';
+                if (log.action === 'Giriş Yaptı') actionClass = 'action-login';
+                else if (log.action.includes('Ekledi') || log.action.includes('Oluşturdu')) actionClass = 'action-add';
+                else if (log.action.includes('Güncelledi')) actionClass = 'action-edit';
+                else if (log.action.includes('Sildi')) actionClass = 'action-delete';
+                else if (log.action.includes('Başarısız')) actionClass = 'action-failed';
+                
+                return `
+                    <tr>
+                        <td>${log.id}</td>
+                        <td>${formattedDate}</td>
+                        <td><strong>${log.username}</strong></td>
+                        <td class="${actionClass}">${log.action}</td>
+                        <td>${log.details || '-'}</td>
+                        <td>${log.ip_address || '-'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('searchBox').addEventListener('input', filterLogs);
+        document.getElementById('actionFilter').addEventListener('change', filterLogs);
+
+        function filterLogs() {
+            const search = document.getElementById('searchBox').value.toLowerCase();
+            const actionFilter = document.getElementById('actionFilter').value;
+            
+            const filtered = allLogs.filter(log => {
+                const matchesSearch = !search || 
+                    log.username.toLowerCase().includes(search) ||
+                    log.action.toLowerCase().includes(search) ||
+                    (log.details && log.details.toLowerCase().includes(search));
+                
+                const matchesAction = !actionFilter || log.action.includes(actionFilter);
+                
+                return matchesSearch && matchesAction;
+            });
+            
+            renderLogs(filtered);
+        }
+
+        // Sayfa yüklendiğinde logları çek
+        fetchLogs();
+        
+        // Her 30 saniyede bir otomatik yenile
+        setInterval(fetchLogs, 30000);
+    </script>
+</body>
+</html>

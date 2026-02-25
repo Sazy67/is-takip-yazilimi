@@ -55,6 +55,18 @@ def init_db():
         )
     ''')
     
+    # Activity logs tablosu
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS activity_logs (
+            id SERIAL PRIMARY KEY,
+            username VARCHAR(50),
+            action VARCHAR(100),
+            details TEXT,
+            ip_address VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
     conn.commit()
     
     # Varsayılan kullanıcıları kontrol et ve sadece yoksa ekle
@@ -117,11 +129,26 @@ def verify_token(token):
     except:
         return None
 
+def log_activity(username, action, details='', ip_address=''):
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('''
+            INSERT INTO activity_logs (username, action, details, ip_address)
+            VALUES (%s, %s, %s, %s)
+        ''', (username, action, details, ip_address))
+        conn.commit()
+        cur.close()
+        conn.close()
+    except:
+        pass
+
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
     username = data.get('username')
     password = data.get('password')
+    ip_address = request.remote_addr
     
     conn = get_db()
     cur = conn.cursor()
@@ -132,6 +159,7 @@ def login():
     
     if user:
         token = create_token(user['id'], user['username'], user['role'])
+        log_activity(username, 'Giriş Yaptı', f'{user["role"]} olarak giriş', ip_address)
         return jsonify({
             'success': True,
             'token': token,
@@ -141,6 +169,7 @@ def login():
             }
         })
     
+    log_activity(username or 'Bilinmeyen', 'Başarısız Giriş', 'Hatalı kullanıcı adı veya şifre', ip_address)
     return jsonify({'success': False, 'message': 'Kullanıcı adı veya şifre hatalı'}), 401
 
 @app.route('/api/logout', methods=['POST'])
@@ -206,6 +235,8 @@ def create_kayit():
     cur.close()
     conn.close()
     
+    log_activity(user_data['username'], 'Kayıt Ekledi', f'Yeni kayıt: {data.get("musteri_ismi")} - {data.get("teklif_no")}', request.remote_addr)
+    
     return jsonify({'id': kayit_id}), 201
 
 @app.route('/api/kayitlar/<int:id>', methods=['PUT'])
@@ -238,6 +269,7 @@ def update_kayit(id):
             conn.commit()
             cur.close()
             conn.close()
+            log_activity(user_data['username'], 'Not Ekledi', f'Kayıt ID: {id}', request.remote_addr)
             return jsonify({'success': True})
     
     # Admin tüm alanları güncelleyebilir
@@ -263,6 +295,7 @@ def update_kayit(id):
         conn.commit()
         cur.close()
         conn.close()
+        log_activity(user_data['username'], 'Kayıt Güncelledi', f'Kayıt ID: {id} - {data.get("musteri_ismi")}', request.remote_addr)
         return jsonify({'success': True})
     
     cur.close()
@@ -279,10 +312,19 @@ def delete_kayit(id):
     
     conn = get_db()
     cur = conn.cursor()
+    
+    # Silmeden önce kayıt bilgisini al
+    cur.execute('SELECT musteri_ismi, teklif_no FROM kayitlar WHERE id=%s', (id,))
+    kayit = cur.fetchone()
+    
     cur.execute('DELETE FROM kayitlar WHERE id=%s', (id,))
     conn.commit()
     cur.close()
     conn.close()
+    
+    if kayit:
+        log_activity(user_data['username'], 'Kayıt Sildi', f'Kayıt ID: {id} - {kayit["musteri_ismi"]} ({kayit["teklif_no"]})', request.remote_addr)
+    
     return jsonify({'success': True})
 
 # Kullanıcı yönetimi endpoint'leri
@@ -325,6 +367,9 @@ def create_user():
         conn.commit()
         cur.close()
         conn.close()
+        
+        log_activity(user_data['username'], 'Kullanıcı Oluşturdu', f'Yeni kullanıcı: {data.get("username")} ({data.get("role")})', request.remote_addr)
+        
         return jsonify({'id': user_id}), 201
     except Exception as e:
         conn.close()
@@ -351,6 +396,9 @@ def update_user(id):
         conn.commit()
         cur.close()
         conn.close()
+        
+        log_activity(user_data['username'], 'Kullanıcı Güncelledi', f'Kullanıcı ID: {id} - {data.get("username")} ({data.get("role")})', request.remote_addr)
+        
         return jsonify({'success': True})
     except Exception as e:
         conn.close()
@@ -370,8 +418,38 @@ def delete_user(id):
     
     conn = get_db()
     cur = conn.cursor()
+    
+    # Silmeden önce kullanıcı bilgisini al
+    cur.execute('SELECT username, role FROM users WHERE id=%s', (id,))
+    user = cur.fetchone()
+    
     cur.execute('DELETE FROM users WHERE id=%s', (id,))
     conn.commit()
     cur.close()
     conn.close()
+    
+    if user:
+        log_activity(user_data['username'], 'Kullanıcı Sildi', f'Kullanıcı ID: {id} - {user["username"]} ({user["role"]})', request.remote_addr)
+    
     return jsonify({'success': True})
+
+# Gizli Log Sayfası - Sadece özel URL ile erişilebilir
+@app.route('/api/secret-logs-x9k2p7m4', methods=['GET'])
+def get_secret_logs():
+    # Basit güvenlik: Query parameter kontrolü
+    secret_key = request.args.get('key')
+    if secret_key != 'suat2025':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT id, username, action, details, ip_address, created_at 
+        FROM activity_logs 
+        ORDER BY created_at DESC 
+        LIMIT 500
+    ''')
+    logs = cur.fetchall()
+    cur.close()
+    conn.close()
+    return jsonify(logs)
