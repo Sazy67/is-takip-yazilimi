@@ -204,6 +204,8 @@ function editKayit(id) {
         const notInput = document.getElementById('notInput');
         notInput.value = '';
         notInput.required = true;
+        notInput.disabled = false;
+        notInput.readOnly = false;
         document.getElementById('submitBtn').textContent = 'Not Ekle';
     } else {
         document.getElementById('formTitle').textContent = 'Kayıt Düzenle';
