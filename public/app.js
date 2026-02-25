@@ -124,7 +124,7 @@ function renderKayitlar(kayitlar) {
     const tbody = document.getElementById('kayitTableBody');
     
     if (kayitlar.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="16" class="empty-state">Henüz kayıt yok.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="18" class="empty-state">Henüz kayıt yok.</td></tr>';
         return;
     }
 
@@ -144,6 +144,16 @@ function renderKayitlar(kayitlar) {
             <td>${formatDate(kayit.paketleme_tarihi)}</td>
             <td>${formatDate(kayit.kasetleme_tarihi)}</td>
             <td>${formatDate(kayit.sevk_tarihi)}</td>
+            <td class="checkbox-cell">
+                <input type="checkbox" ${kayit.teklif_durumu ? 'checked' : ''} 
+                    onchange="updateCheckbox(${kayit.id}, 'teklif_durumu', this.checked)"
+                    ${currentUser.role !== 'admin' ? 'disabled' : ''}>
+            </td>
+            <td class="checkbox-cell">
+                <input type="checkbox" ${kayit.imalat_durumu ? 'checked' : ''} 
+                    onchange="updateCheckbox(${kayit.id}, 'imalat_durumu', this.checked)"
+                    ${currentUser.role !== 'admin' ? 'disabled' : ''}>
+            </td>
             <td class="notlar-cell">${kayit.notlar || ''}</td>
             <td class="actions">
                 <button onclick="editKayit(${kayit.id})" class="btn btn-success">
@@ -271,6 +281,8 @@ function getFormData() {
         paketleme_tarihi: document.getElementById('paketleme_tarihi').value,
         kasetleme_tarihi: document.getElementById('kasetleme_tarihi').value,
         sevk_tarihi: document.getElementById('sevk_tarihi').value,
+        teklif_durumu: document.getElementById('teklif_durumu').checked,
+        imalat_durumu: document.getElementById('imalat_durumu').checked,
         notlar: document.getElementById('notlar').value
     };
 }
@@ -332,6 +344,18 @@ function getAdminFormHTML(kayit = {}) {
         <div class="form-group">
             <label>Sevk Tarihi</label>
             <input type="date" id="sevk_tarihi" value="${formatDateForInput(kayit.sevk_tarihi)}">
+        </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="teklif_durumu" ${kayit.teklif_durumu ? 'checked' : ''}>
+                Teklif Tamamlandı
+            </label>
+        </div>
+        <div class="form-group">
+            <label>
+                <input type="checkbox" id="imalat_durumu" ${kayit.imalat_durumu ? 'checked' : ''}>
+                İmalat Tamamlandı
+            </label>
         </div>
         <div class="form-group full-width">
             <label>Notlar</label>
@@ -522,4 +546,47 @@ async function deleteUser(id) {
 function hideUserForm() {
     document.getElementById('userFormSection').classList.add('hidden');
     editingUserId = null;
+}
+
+async function updateCheckbox(id, field, value) {
+    try {
+        const kayit = allKayitlar.find(k => k.id === id);
+        if (!kayit) return;
+
+        const updateData = {
+            bolum: kayit.bolum,
+            teklif_no: kayit.teklif_no,
+            musteri_ismi: kayit.musteri_ismi,
+            teklif_tarihi: kayit.teklif_tarihi,
+            onay_tarihi: kayit.onay_tarihi,
+            uretime_verilme_tarihi: kayit.uretime_verilme_tarihi,
+            uretim_numarasi: kayit.uretim_numarasi,
+            cam_siparis_tarihi: kayit.cam_siparis_tarihi,
+            cam_siparis_numarasi: kayit.cam_siparis_numarasi,
+            cam_adedi: kayit.cam_adedi,
+            uretim_planlama_tarihi: kayit.uretim_planlama_tarihi,
+            paketleme_tarihi: kayit.paketleme_tarihi,
+            kasetleme_tarihi: kayit.kasetleme_tarihi,
+            sevk_tarihi: kayit.sevk_tarihi,
+            teklif_durumu: kayit.teklif_durumu,
+            imalat_durumu: kayit.imalat_durumu,
+            notlar: kayit.notlar
+        };
+
+        updateData[field] = value;
+
+        await fetch(`/api/kayitlar/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(updateData)
+        });
+
+        fetchKayitlar();
+    } catch (error) {
+        console.error('Checkbox güncelleme hatası:', error);
+        alert('Güncelleme hatası');
+    }
 }

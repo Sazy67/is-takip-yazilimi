@@ -50,10 +50,23 @@ def init_db():
             paketleme_tarihi DATE,
             kasetleme_tarihi DATE,
             sevk_tarihi DATE,
+            teklif_durumu BOOLEAN DEFAULT FALSE,
+            imalat_durumu BOOLEAN DEFAULT FALSE,
             notlar TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    
+    # Mevcut tabloya yeni kolonları ekle (eğer yoksa)
+    try:
+        cur.execute('''
+            ALTER TABLE kayitlar 
+            ADD COLUMN IF NOT EXISTS teklif_durumu BOOLEAN DEFAULT FALSE,
+            ADD COLUMN IF NOT EXISTS imalat_durumu BOOLEAN DEFAULT FALSE
+        ''')
+        conn.commit()
+    except:
+        pass
     
     # Activity logs tablosu
     cur.execute('''
@@ -283,14 +296,16 @@ def update_kayit(id):
                 bolum=%s, teklif_no=%s, musteri_ismi=%s, teklif_tarihi=%s, onay_tarihi=%s,
                 uretime_verilme_tarihi=%s, uretim_numarasi=%s, cam_siparis_tarihi=%s,
                 cam_siparis_numarasi=%s, cam_adedi=%s, uretim_planlama_tarihi=%s,
-                paketleme_tarihi=%s, kasetleme_tarihi=%s, sevk_tarihi=%s, notlar=%s
+                paketleme_tarihi=%s, kasetleme_tarihi=%s, sevk_tarihi=%s, 
+                teklif_durumu=%s, imalat_durumu=%s, notlar=%s
             WHERE id=%s
         ''', (
             clean_value(data.get('bolum')), clean_value(data.get('teklif_no')), clean_value(data.get('musteri_ismi')),
             clean_value(data.get('teklif_tarihi')), clean_value(data.get('onay_tarihi')), clean_value(data.get('uretime_verilme_tarihi')),
             clean_value(data.get('uretim_numarasi')), clean_value(data.get('cam_siparis_tarihi')), clean_value(data.get('cam_siparis_numarasi')),
             clean_value(data.get('cam_adedi')), clean_value(data.get('uretim_planlama_tarihi')), clean_value(data.get('paketleme_tarihi')),
-            clean_value(data.get('kasetleme_tarihi')), clean_value(data.get('sevk_tarihi')), clean_value(data.get('notlar')), id
+            clean_value(data.get('kasetleme_tarihi')), clean_value(data.get('sevk_tarihi')), 
+            data.get('teklif_durumu', False), data.get('imalat_durumu', False), clean_value(data.get('notlar')), id
         ))
         conn.commit()
         cur.close()
