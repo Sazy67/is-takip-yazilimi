@@ -200,22 +200,29 @@ function editKayit(id) {
     if (currentUser.role === 'user') {
         document.getElementById('formTitle').textContent = 'Not Ekle';
         document.getElementById('adminForm').classList.add('hidden');
-        document.getElementById('userForm').classList.remove('hidden');
+        document.getElementById('adminForm').style.display = 'none';
+        
+        const userForm = document.getElementById('userForm');
+        userForm.classList.remove('hidden');
+        userForm.style.display = 'block';
+        userForm.style.visibility = 'visible';
+        
         const notInput = document.getElementById('notInput');
         notInput.value = '';
-        notInput.required = false; // Required'ı kaldır
+        notInput.required = false;
         notInput.disabled = false;
         notInput.readOnly = false;
+        notInput.style.display = 'block';
+        notInput.style.visibility = 'visible';
         notInput.removeAttribute('disabled');
         notInput.removeAttribute('readonly');
         document.getElementById('submitBtn').textContent = 'Not Ekle';
         
-        // Textarea'ya focus et ve scroll yap
+        // Textarea'ya focus et
         setTimeout(() => {
             notInput.focus();
-            notInput.click(); // Tıklama simüle et
-            notInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+            notInput.click();
+        }, 200);
     } else {
         document.getElementById('formTitle').textContent = 'Kayıt Düzenle';
         document.getElementById('adminForm').innerHTML = getAdminFormHTML(kayit);
