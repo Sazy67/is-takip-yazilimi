@@ -181,6 +181,10 @@ def create_kayit():
     conn = get_db()
     cur = conn.cursor()
     
+    # Boş string'leri None'a çevir
+    def clean_value(val):
+        return None if val == '' else val
+    
     cur.execute('''
         INSERT INTO kayitlar (
             bolum, teklif_no, musteri_ismi, teklif_tarihi, onay_tarihi,
@@ -190,11 +194,11 @@ def create_kayit():
         ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
     ''', (
-        data.get('bolum'), data.get('teklif_no'), data.get('musteri_ismi'),
-        data.get('teklif_tarihi'), data.get('onay_tarihi'), data.get('uretime_verilme_tarihi'),
-        data.get('uretim_numarasi'), data.get('cam_siparis_tarihi'), data.get('cam_siparis_numarasi'),
-        data.get('cam_adedi'), data.get('uretim_planlama_tarihi'), data.get('paketleme_tarihi'),
-        data.get('kasetleme_tarihi'), data.get('sevk_tarihi'), data.get('notlar')
+        clean_value(data.get('bolum')), clean_value(data.get('teklif_no')), clean_value(data.get('musteri_ismi')),
+        clean_value(data.get('teklif_tarihi')), clean_value(data.get('onay_tarihi')), clean_value(data.get('uretime_verilme_tarihi')),
+        clean_value(data.get('uretim_numarasi')), clean_value(data.get('cam_siparis_tarihi')), clean_value(data.get('cam_siparis_numarasi')),
+        clean_value(data.get('cam_adedi')), clean_value(data.get('uretim_planlama_tarihi')), clean_value(data.get('paketleme_tarihi')),
+        clean_value(data.get('kasetleme_tarihi')), clean_value(data.get('sevk_tarihi')), clean_value(data.get('notlar'))
     ))
     
     kayit_id = cur.fetchone()['id']
@@ -238,6 +242,10 @@ def update_kayit(id):
     
     # Admin tüm alanları güncelleyebilir
     if user_data['role'] == 'admin':
+        # Boş string'leri None'a çevir
+        def clean_value(val):
+            return None if val == '' else val
+        
         cur.execute('''
             UPDATE kayitlar SET
                 bolum=%s, teklif_no=%s, musteri_ismi=%s, teklif_tarihi=%s, onay_tarihi=%s,
@@ -246,11 +254,11 @@ def update_kayit(id):
                 paketleme_tarihi=%s, kasetleme_tarihi=%s, sevk_tarihi=%s, notlar=%s
             WHERE id=%s
         ''', (
-            data.get('bolum'), data.get('teklif_no'), data.get('musteri_ismi'),
-            data.get('teklif_tarihi'), data.get('onay_tarihi'), data.get('uretime_verilme_tarihi'),
-            data.get('uretim_numarasi'), data.get('cam_siparis_tarihi'), data.get('cam_siparis_numarasi'),
-            data.get('cam_adedi'), data.get('uretim_planlama_tarihi'), data.get('paketleme_tarihi'),
-            data.get('kasetleme_tarihi'), data.get('sevk_tarihi'), data.get('notlar'), id
+            clean_value(data.get('bolum')), clean_value(data.get('teklif_no')), clean_value(data.get('musteri_ismi')),
+            clean_value(data.get('teklif_tarihi')), clean_value(data.get('onay_tarihi')), clean_value(data.get('uretime_verilme_tarihi')),
+            clean_value(data.get('uretim_numarasi')), clean_value(data.get('cam_siparis_tarihi')), clean_value(data.get('cam_siparis_numarasi')),
+            clean_value(data.get('cam_adedi')), clean_value(data.get('uretim_planlama_tarihi')), clean_value(data.get('paketleme_tarihi')),
+            clean_value(data.get('kasetleme_tarihi')), clean_value(data.get('sevk_tarihi')), clean_value(data.get('notlar')), id
         ))
         conn.commit()
         cur.close()
