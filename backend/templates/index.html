@@ -457,7 +457,7 @@
     <div id="loginScreen" class="login-container">
         <div class="login-box">
             <div class="login-logo">
-                <img src="/rigel-logo.png" alt="Rigel Logo">
+                <img src="/static/rigel-logo.png" alt="Rigel Logo">
             </div>
             <h1>İş Takip Yazılımı</h1>
             <h2>Giriş Yap</h2>
@@ -494,7 +494,7 @@
             <div class="header-section">
                 <div class="header-left">
                     <a href="/" style="display: flex; align-items: center; text-decoration: none;">
-                        <img src="/rigel-logo.png" alt="Rigel Logo" class="app-logo">
+                        <img src="/static/rigel-logo.png" alt="Rigel Logo" class="app-logo">
                     </a>
                     <h1>İş Takip Yazılımı</h1>
                 </div>
@@ -568,10 +568,8 @@
                         <!-- Admin form fields will be inserted here -->
                     </div>
                     <div id="userForm" style="display: none;">
-                        <div class="form-group full-width" style="display: block !important;">
-                            <label style="display: block; margin-bottom: 10px; font-weight: bold; color: #333;">Yeni Not</label>
-                            <textarea id="notInput" name="notInput" placeholder="Notunuzu yazın..." style="background: white !important; cursor: text !important; min-height: 120px !important; width: 100% !important; display: block !important; border: 2px solid #667eea !important; padding: 12px !important; font-size: 16px !important; color: #333 !important; opacity: 1 !important; pointer-events: auto !important; visibility: visible !important; position: relative !important; z-index: 999 !important; font-family: inherit !important;"></textarea>
-                        </div>
+                        <label for="notInput" style="display: block; margin-bottom: 10px; font-weight: bold; color: #333; font-size: 16px;">Yeni Not:</label>
+                        <textarea id="notInput" name="notInput" rows="6" placeholder="Notunuzu buraya yazın..." style="width: 100%; padding: 15px; border: 2px solid #667eea; border-radius: 8px; font-size: 16px; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
                     </div>
                     <div>
                         <button type="submit" class="btn btn-success" id="submitBtn">Kaydet</button>
@@ -617,6 +615,6 @@
         </footer>
     </div>
 
-    <script src="/app.js"></script>
+    <script src="/static/app.js"></script>
 </body>
 </html>
