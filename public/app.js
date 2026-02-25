@@ -402,7 +402,7 @@ function showMainApp() {
     mainApp.style.display = 'flex';
     mainApp.classList.remove('hidden');
     
-    document.getElementById('userBadge').textContent = currentUser.role === 'admin' ? 'Admin' : 'User';
+    document.getElementById('userBadge').textContent = currentUser.username;
     
     if (currentUser.role === 'admin') {
         document.getElementById('newRecordBtn').classList.remove('hidden');
