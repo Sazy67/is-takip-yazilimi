@@ -457,17 +457,28 @@
 
         // Users functions
         async function fetchUsers() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="4" style="text-align: center; color: #dc3545;">Kullanıcı yönetimi için <a href="/" style="color: #667eea; font-weight: 600;">giriş yapmanız</a> gerekiyor.</td></tr>';
+                return;
+            }
+
             try {
                 const response = await fetch('/api/users', {
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${token}`
                     }
                 });
+                
+                if (!response.ok) {
+                    throw new Error('Unauthorized');
+                }
+                
                 const users = await response.json();
                 renderUsers(users);
             } catch (error) {
                 console.error('Kullanıcılar yüklenirken hata:', error);
-                document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="4" style="text-align: center; color: #dc3545;">Yükleme hatası! Giriş yapmanız gerekebilir.</td></tr>';
+                document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="4" style="text-align: center; color: #dc3545;">Yetkiniz yok veya oturumunuz sona erdi. <a href="/" style="color: #667eea; font-weight: 600;">Giriş yapın</a></td></tr>';
             }
         }
 
@@ -487,6 +498,13 @@
         }
 
         document.getElementById('newUserBtn').addEventListener('click', () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Kullanıcı eklemek için giriş yapmanız gerekiyor!');
+                window.location.href = '/';
+                return;
+            }
+            
             editingUserId = null;
             document.getElementById('userFormTitle').textContent = 'Yeni Kullanıcı';
             document.getElementById('userUsername').value = '';
@@ -496,9 +514,16 @@
         });
 
         function editUser(id) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Kullanıcı düzenlemek için giriş yapmanız gerekiyor!');
+                window.location.href = '/';
+                return;
+            }
+
             fetch('/api/users', {
                 headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    'Authorization': `Bearer ${token}`
                 }
             })
             .then(res => res.json())
@@ -512,11 +537,21 @@
                     document.getElementById('userRole').value = user.role;
                     document.getElementById('userFormSection').classList.remove('hidden');
                 }
+            })
+            .catch(error => {
+                alert('Kullanıcı bilgileri alınamadı!');
             });
         }
 
         async function handleUserSubmit(e) {
             e.preventDefault();
+            
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('İşlem için giriş yapmanız gerekiyor!');
+                window.location.href = '/';
+                return;
+            }
             
             const userData = {
                 username: document.getElementById('userUsername').value,
@@ -532,7 +567,7 @@
                     method,
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${token}`
                     },
                     body: JSON.stringify(userData)
                 });
@@ -550,6 +585,13 @@
         }
 
         async function deleteUser(id) {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Kullanıcı silmek için giriş yapmanız gerekiyor!');
+                window.location.href = '/';
+                return;
+            }
+
             if (!confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) return;
             if (!confirm('Kullanıcı kalıcı olarak silinecek! Onaylıyor musunuz?')) return;
             
@@ -557,7 +599,7 @@
                 const response = await fetch(`/api/users/${id}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${token}`
                     }
                 });
                 
