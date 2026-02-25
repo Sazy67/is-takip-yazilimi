@@ -1,6 +1,7 @@
 let currentUser = null;
 let allKayitlar = [];
 let editingId = null;
+let editingUserId = null;
 
 // Check authentication on load
 window.addEventListener('DOMContentLoaded', () => {
@@ -11,10 +12,17 @@ window.addEventListener('DOMContentLoaded', () => {
 function setupEventListeners() {
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    document.getElementById('usersBtn').addEventListener('click', showUserManagement);
     document.getElementById('newRecordBtn').addEventListener('click', showNewRecordForm);
     document.getElementById('kayitForm').addEventListener('submit', handleSubmit);
     document.getElementById('cancelBtn').addEventListener('click', hideForm);
     document.getElementById('searchBox').addEventListener('input', handleSearch);
+    
+    // User management
+    document.getElementById('newUserBtn').addEventListener('click', showNewUserForm);
+    document.getElementById('backToRecordsBtn').addEventListener('click', showRecordsView);
+    document.getElementById('userForm').addEventListener('submit', handleUserSubmit);
+    document.getElementById('cancelUserBtn').addEventListener('click', hideUserForm);
 }
 
 async function checkAuth() {
@@ -373,8 +381,145 @@ function showMainApp() {
     document.getElementById('userBadge').textContent = currentUser.role === 'admin' ? 'Admin' : 'User';
     
     if (currentUser.role === 'admin') {
+        document.getElementById('usersBtn').classList.remove('hidden');
         document.getElementById('newRecordBtn').classList.remove('hidden');
     } else {
+        document.getElementById('usersBtn').classList.add('hidden');
         document.getElementById('newRecordBtn').classList.add('hidden');
     }
+}
+
+// Kullanıcı Yönetimi Fonksiyonları
+function showUserManagement() {
+    document.getElementById('userManagementSection').classList.remove('hidden');
+    document.getElementById('formSection').classList.add('hidden');
+    document.getElementById('searchBox').classList.add('hidden');
+    document.querySelector('.table-container').classList.add('hidden');
+    fetchUsers();
+}
+
+function showRecordsView() {
+    document.getElementById('userManagementSection').classList.add('hidden');
+    document.getElementById('searchBox').classList.remove('hidden');
+    document.querySelector('.table-container').classList.remove('hidden');
+    fetchKayitlar();
+}
+
+async function fetchUsers() {
+    try {
+        const response = await fetch('/api/users', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        const users = await response.json();
+        renderUsers(users);
+    } catch (error) {
+        console.error('Kullanıcılar yüklenirken hata:', error);
+    }
+}
+
+function renderUsers(users) {
+    const tbody = document.getElementById('usersTableBody');
+    tbody.innerHTML = users.map(user => `
+        <tr>
+            <td>${user.id}</td>
+            <td>${user.username}</td>
+            <td>${user.role === 'admin' ? 'Admin' : 'User'}</td>
+            <td class="actions">
+                <button onclick="editUser(${user.id})" class="btn btn-success">Düzenle</button>
+                <button onclick="deleteUser(${user.id})" class="btn btn-danger">Sil</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function showNewUserForm() {
+    editingUserId = null;
+    document.getElementById('userFormTitle').textContent = 'Yeni Kullanıcı';
+    document.getElementById('userUsername').value = '';
+    document.getElementById('userPassword').value = '';
+    document.getElementById('userRole').value = 'user';
+    document.getElementById('userFormSection').classList.remove('hidden');
+}
+
+function editUser(id) {
+    fetch(`/api/users`, {
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+    })
+    .then(res => res.json())
+    .then(users => {
+        const user = users.find(u => u.id === id);
+        if (user) {
+            editingUserId = id;
+            document.getElementById('userFormTitle').textContent = 'Kullanıcı Düzenle';
+            document.getElementById('userUsername').value = user.username;
+            document.getElementById('userPassword').value = '';
+            document.getElementById('userRole').value = user.role;
+            document.getElementById('userFormSection').classList.remove('hidden');
+        }
+    });
+}
+
+async function handleUserSubmit(e) {
+    e.preventDefault();
+    
+    const userData = {
+        username: document.getElementById('userUsername').value,
+        password: document.getElementById('userPassword').value,
+        role: document.getElementById('userRole').value
+    };
+    
+    try {
+        const url = editingUserId ? `/api/users/${editingUserId}` : '/api/users';
+        const method = editingUserId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify(userData)
+        });
+        
+        if (response.ok) {
+            hideUserForm();
+            fetchUsers();
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Hata oluştu');
+        }
+    } catch (error) {
+        alert('Kullanıcı kaydedilirken hata oluştu');
+    }
+}
+
+async function deleteUser(id) {
+    if (!confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) return;
+    
+    try {
+        const response = await fetch(`/api/users/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            fetchUsers();
+        } else {
+            const error = await response.json();
+            alert(error.error || 'Silme hatası');
+        }
+    } catch (error) {
+        alert('Kullanıcı silinirken hata oluştu');
+    }
+}
+
+function hideUserForm() {
+    document.getElementById('userFormSection').classList.add('hidden');
+    editingUserId = null;
 }

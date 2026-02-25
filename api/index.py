@@ -284,3 +284,94 @@ def delete_kayit(id):
     cur.close()
     conn.close()
     return jsonify({'success': True})
+
+# Kullanıcı yönetimi endpoint'leri
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
+        return jsonify({'error': 'Yetkisiz işlem'}), 403
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT id, username, role FROM users ORDER BY id')
+    users = cur.fetchall()
+    cur.close()
+    conn.close()
+    return jsonify(users)
+
+@app.route('/api/users', methods=['POST'])
+def create_user():
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
+        return jsonify({'error': 'Yetkisiz işlem'}), 403
+    
+    data = request.json
+    conn = get_db()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute('''
+            INSERT INTO users (username, password, role)
+            VALUES (%s, %s, %s)
+            RETURNING id
+        ''', (data.get('username'), data.get('password'), data.get('role')))
+        
+        user_id = cur.fetchone()['id']
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'id': user_id}), 201
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': 'Kullanıcı adı zaten mevcut'}), 400
+
+@app.route('/api/users/<int:id>', methods=['PUT'])
+def update_user(id):
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
+        return jsonify({'error': 'Yetkisiz işlem'}), 403
+    
+    data = request.json
+    conn = get_db()
+    cur = conn.cursor()
+    
+    try:
+        cur.execute('''
+            UPDATE users SET username=%s, password=%s, role=%s
+            WHERE id=%s
+        ''', (data.get('username'), data.get('password'), data.get('role'), id))
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.close()
+        return jsonify({'error': 'Kullanıcı adı zaten mevcut'}), 400
+
+@app.route('/api/users/<int:id>', methods=['DELETE'])
+def delete_user(id):
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
+        return jsonify({'error': 'Yetkisiz işlem'}), 403
+    
+    # Kendi hesabını silemesin
+    if user_data['user_id'] == id:
+        return jsonify({'error': 'Kendi hesabınızı silemezsiniz'}), 400
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('DELETE FROM users WHERE id=%s', (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({'success': True})

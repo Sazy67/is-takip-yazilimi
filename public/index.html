@@ -303,7 +303,8 @@
         }
 
         .form-group input,
-        .form-group textarea {
+        .form-group textarea,
+        .form-group select {
             padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
@@ -468,6 +469,7 @@
                 </div>
                 <div class="user-info">
                     <div class="user-badge" id="userBadge"></div>
+                    <button id="usersBtn" class="btn btn-primary hidden">Kullanıcılar</button>
                     <button id="newRecordBtn" class="btn btn-primary hidden">+ Yeni Kayıt</button>
                     <button id="logoutBtn" class="btn btn-secondary">Çıkış</button>
                 </div>
@@ -475,6 +477,59 @@
         </div>
 
         <div class="content-area">
+            <!-- User Management Section -->
+            <div id="userManagementSection" class="hidden">
+                <div class="form-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2>Kullanıcı Yönetimi</h2>
+                        <div>
+                            <button id="newUserBtn" class="btn btn-primary">+ Yeni Kullanıcı</button>
+                            <button id="backToRecordsBtn" class="btn btn-secondary">Kayıtlara Dön</button>
+                        </div>
+                    </div>
+                    
+                    <div id="userFormSection" class="hidden" style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h3 id="userFormTitle">Yeni Kullanıcı</h3>
+                        <form id="userForm">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div class="form-group">
+                                    <label>Kullanıcı Adı</label>
+                                    <input type="text" id="userUsername" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Şifre</label>
+                                    <input type="password" id="userPassword" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Yetki</label>
+                                    <select id="userRole" required>
+                                        <option value="user">User</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-success">Kaydet</button>
+                                <button type="button" id="cancelUserBtn" class="btn btn-secondary">İptal</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <table style="width: 100%; background: white; border-radius: 8px; overflow: hidden;">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Kullanıcı Adı</th>
+                                <th>Yetki</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Form Section -->
             <div id="formSection" class="form-section hidden">
                 <h2 id="formTitle">Yeni Kayıt</h2>
