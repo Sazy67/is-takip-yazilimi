@@ -377,13 +377,22 @@
 
         td.checkbox-cell {
             text-align: center;
-            min-width: 50px;
+            min-width: 40px;
+            max-width: 40px;
+            padding: 4px;
         }
 
         td.checkbox-cell input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
+            width: 14px;
+            height: 14px;
             cursor: pointer;
+        }
+        
+        th.checkbox-header {
+            min-width: 40px;
+            max-width: 40px;
+            padding: 4px;
+            font-size: 10px;
         }
 
         td.notlar-cell {
@@ -599,8 +608,8 @@
                             <th>Paketleme</th>
                             <th>Kasetleme</th>
                             <th>Sevk</th>
-                            <th>Teklif</th>
-                            <th>İmalat</th>
+                            <th class="checkbox-header">Teklif</th>
+                            <th class="checkbox-header">İmalat</th>
                             <th>Notlar</th>
                             <th>İşlemler</th>
                         </tr>
