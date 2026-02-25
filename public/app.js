@@ -12,7 +12,6 @@ window.addEventListener('DOMContentLoaded', () => {
 function setupEventListeners() {
     document.getElementById('loginForm').addEventListener('submit', handleLogin);
     document.getElementById('logoutBtn').addEventListener('click', handleLogout);
-    document.getElementById('usersBtn').addEventListener('click', showUserManagement);
     document.getElementById('newRecordBtn').addEventListener('click', showNewRecordForm);
     document.getElementById('kayitForm').addEventListener('submit', handleSubmit);
     document.getElementById('cancelBtn').addEventListener('click', hideForm);
@@ -218,7 +217,8 @@ function editKayit(id) {
 }
 
 async function deleteKayit(id) {
-    if (!confirm('Silmek istediğinizden emin misiniz?')) return;
+    if (!confirm('Bu kaydı silmek istediğinizden emin misiniz?')) return;
+    if (!confirm('Kayıt kalıcı olarak silinecek! Onaylıyor musunuz?')) return;
 
     try {
         await fetch(`/api/kayitlar/${id}`, {
@@ -405,10 +405,8 @@ function showMainApp() {
     document.getElementById('userBadge').textContent = currentUser.role === 'admin' ? 'Admin' : 'User';
     
     if (currentUser.role === 'admin') {
-        document.getElementById('usersBtn').classList.remove('hidden');
         document.getElementById('newRecordBtn').classList.remove('hidden');
     } else {
-        document.getElementById('usersBtn').classList.add('hidden');
         document.getElementById('newRecordBtn').classList.add('hidden');
     }
 }
