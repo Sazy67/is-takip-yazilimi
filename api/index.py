@@ -458,9 +458,11 @@ def get_secret_logs():
     
     conn = get_db()
     cur = conn.cursor()
+    # Sadece kayıt güncelleme ve not ekleme loglarını göster
     cur.execute('''
         SELECT id, username, action, details, ip_address, created_at 
         FROM activity_logs 
+        WHERE action IN ('Kayıt Güncelledi', 'Not Ekledi')
         ORDER BY created_at DESC 
         LIMIT 500
     ''')
