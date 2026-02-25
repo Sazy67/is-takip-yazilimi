@@ -185,7 +185,7 @@ function showNewRecordForm() {
     document.getElementById('userForm').classList.add('hidden');
     // User form'daki required'ı kaldır
     const notInput = document.getElementById('notInput');
-    if (notInput) notInput.removeAttribute('required');
+    if (notInput) notInput.required = false;
     document.getElementById('submitBtn').textContent = 'Kaydet';
     document.getElementById('formSection').classList.remove('hidden');
 }
@@ -203,7 +203,7 @@ function editKayit(id) {
         document.getElementById('userForm').classList.remove('hidden');
         const notInput = document.getElementById('notInput');
         notInput.value = '';
-        notInput.setAttribute('required', 'required');
+        notInput.required = true;
         document.getElementById('submitBtn').textContent = 'Not Ekle';
     } else {
         document.getElementById('formTitle').textContent = 'Kayıt Düzenle';
@@ -211,7 +211,7 @@ function editKayit(id) {
         document.getElementById('adminForm').classList.remove('hidden');
         document.getElementById('userForm').classList.add('hidden');
         const notInput = document.getElementById('notInput');
-        if (notInput) notInput.removeAttribute('required');
+        if (notInput) notInput.required = false;
         document.getElementById('submitBtn').textContent = 'Güncelle';
     }
 }
@@ -236,33 +236,56 @@ async function deleteKayit(id) {
 async function handleSubmit(e) {
     e.preventDefault();
 
-    if (currentUser.role === 'user') {
-        const notlar = document.getElementById('notInput').value;
-        await fetch(`/api/kayitlar/${editingId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({ notlar })
-        });
-    } else {
-        const formData = getFormData();
-        const url = editingId ? `/api/kayitlar/${editingId}` : '/api/kayitlar';
-        const method = editingId ? 'PUT' : 'POST';
+    try {
+        if (currentUser.role === 'user') {
+            const notlar = document.getElementById('notInput').value;
+            
+            if (!notlar || notlar.trim() === '') {
+                alert('Lütfen bir not yazın!');
+                return;
+            }
+            
+            const response = await fetch(`/api/kayitlar/${editingId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ notlar })
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                alert('Not eklenirken hata: ' + (error.error || 'Bilinmeyen hata'));
+                return;
+            }
+        } else {
+            const formData = getFormData();
+            const url = editingId ? `/api/kayitlar/${editingId}` : '/api/kayitlar';
+            const method = editingId ? 'PUT' : 'POST';
 
-        await fetch(url, {
-            method,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify(formData)
-        });
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(formData)
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                alert('Kayıt kaydedilirken hata: ' + (error.error || 'Bilinmeyen hata'));
+                return;
+            }
+        }
+
+        hideForm();
+        fetchKayitlar();
+    } catch (error) {
+        console.error('Submit error:', error);
+        alert('İşlem sırasında hata oluştu: ' + error.message);
     }
-
-    hideForm();
-    fetchKayitlar();
 }
 
 function getFormData() {
