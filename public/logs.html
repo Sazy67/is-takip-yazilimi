@@ -371,7 +371,7 @@
 
             <div class="form-section">
                 <h3 style="margin-bottom: 15px;">📤 Yedek Yükle</h3>
-                <p style="color: #666; margin-bottom: 15px;">Excel dosyasından kayıtları geri yükler. <strong>Dikkat:</strong> Mevcut kayıtlar silinmez, yeni kayıtlar eklenir.</p>
+                <p style="color: #666; margin-bottom: 15px;">Excel dosyasından kayıtları geri yükler. <strong style="color: #dc3545;">DİKKAT:</strong> Mevcut tüm kayıtlar silinecek ve Excel'deki veriler yüklenecek!</p>
                 <input type="file" id="excelFile" accept=".xlsx,.xls" style="margin-bottom: 15px;">
                 <br>
                 <button onclick="importFromExcel()" class="btn btn-primary">Excel'den Yükle</button>
@@ -705,7 +705,11 @@
                 return;
             }
 
-            if (!confirm('Excel dosyasındaki kayıtlar sisteme eklenecek. Devam etmek istiyor musunuz?')) {
+            if (!confirm('⚠️ DİKKAT: Mevcut TÜM kayıtlar silinecek ve Excel dosyasındaki veriler yüklenecek!\n\nDevam etmek istiyor musunuz?')) {
+                return;
+            }
+
+            if (!confirm('Son onay: Tüm mevcut veriler kalıcı olarak silinecek. Emin misiniz?')) {
                 return;
             }
 
@@ -731,8 +735,8 @@
                 if (response.ok) {
                     statusText.innerHTML = `
                         <p style="color: #28a745; font-weight: 600;">✓ Başarılı!</p>
-                        <p>Toplam ${result.total} kayıt işlendi</p>
-                        <p>Eklenen: ${result.added}</p>
+                        <p>Eski kayıtlar silindi: ${result.deleted}</p>
+                        <p>Yeni kayıtlar eklendi: ${result.added}</p>
                         <p>Atlanan: ${result.skipped}</p>
                     `;
                     fileInput.value = '';

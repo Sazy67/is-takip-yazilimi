@@ -563,6 +563,12 @@ def import_excel():
         conn = get_db()
         cur = conn.cursor()
         
+        # Önce tüm kayıtları sil
+        cur.execute('SELECT COUNT(*) as count FROM kayitlar')
+        deleted_count = cur.fetchone()['count']
+        cur.execute('DELETE FROM kayitlar')
+        conn.commit()
+        
         added = 0
         skipped = 0
         total = 0
@@ -620,11 +626,11 @@ def import_excel():
         cur.close()
         conn.close()
         
-        log_activity(user_data['username'], 'Excel Yedek Yükledi', f'{added} kayıt eklendi, {skipped} atlandı', request.remote_addr)
+        log_activity(user_data['username'], 'Excel Yedek Yükledi', f'{deleted_count} kayıt silindi, {added} kayıt eklendi', request.remote_addr)
         
         return jsonify({
             'success': True,
-            'total': total,
+            'deleted': deleted_count,
             'added': added,
             'skipped': skipped
         })
