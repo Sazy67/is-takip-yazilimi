@@ -244,6 +244,7 @@
         <div class="tabs">
             <button class="tab active" onclick="switchTab('logs')">Aktivite Logları</button>
             <button class="tab" onclick="switchTab('users')">Kullanıcı Yönetimi</button>
+            <button class="tab" onclick="switchTab('backup')">Yedekleme</button>
         </div>
 
         <!-- Logs Tab -->
@@ -354,6 +355,33 @@
                 </table>
             </div>
         </div>
+
+        <!-- Backup Tab -->
+        <div id="backupTab" class="tab-content">
+            <div style="margin-bottom: 30px;">
+                <h2 style="color: #333; margin-bottom: 10px;">📦 Yedekleme ve Geri Yükleme</h2>
+                <p style="color: #666;">Tüm kayıtlarınızı Excel formatında yedekleyebilir veya geri yükleyebilirsiniz.</p>
+            </div>
+
+            <div class="form-section">
+                <h3 style="margin-bottom: 15px;">📥 Yedek Al</h3>
+                <p style="color: #666; margin-bottom: 15px;">Tüm kayıtları Excel dosyası olarak indirir.</p>
+                <button onclick="exportToExcel()" class="btn btn-success">Excel Olarak İndir</button>
+            </div>
+
+            <div class="form-section">
+                <h3 style="margin-bottom: 15px;">📤 Yedek Yükle</h3>
+                <p style="color: #666; margin-bottom: 15px;">Excel dosyasından kayıtları geri yükler. <strong>Dikkat:</strong> Mevcut kayıtlar silinmez, yeni kayıtlar eklenir.</p>
+                <input type="file" id="excelFile" accept=".xlsx,.xls" style="margin-bottom: 15px;">
+                <br>
+                <button onclick="importFromExcel()" class="btn btn-primary">Excel'den Yükle</button>
+            </div>
+
+            <div id="importStatus" class="form-section hidden">
+                <h3 style="margin-bottom: 10px;">İşlem Durumu</h3>
+                <div id="importStatusText"></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -373,6 +401,9 @@
                 document.querySelector('.tab:nth-child(2)').classList.add('active');
                 document.getElementById('usersTab').classList.add('active');
                 fetchUsers();
+            } else if (tab === 'backup') {
+                document.querySelector('.tab:nth-child(3)').classList.add('active');
+                document.getElementById('backupTab').classList.add('active');
             }
         }
 
@@ -622,6 +653,96 @@
         // Initialize
         fetchLogs();
         setInterval(fetchLogs, 30000); // Auto-refresh logs every 30 seconds
+
+        // Backup functions
+        async function exportToExcel() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Excel indirmek için giriş yapmanız gerekiyor!');
+                window.location.href = '/';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/export-excel', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Export failed');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const date = new Date().toISOString().split('T')[0];
+                a.download = `kayitlar_yedek_${date}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                alert('Excel dosyası başarıyla indirildi!');
+            } catch (error) {
+                alert('Excel indirme hatası!');
+            }
+        }
+
+        async function importFromExcel() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Excel yüklemek için giriş yapmanız gerekiyor!');
+                window.location.href = '/';
+                return;
+            }
+
+            const fileInput = document.getElementById('excelFile');
+            if (!fileInput.files.length) {
+                alert('Lütfen bir Excel dosyası seçin!');
+                return;
+            }
+
+            if (!confirm('Excel dosyasındaki kayıtlar sisteme eklenecek. Devam etmek istiyor musunuz?')) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            const statusDiv = document.getElementById('importStatus');
+            const statusText = document.getElementById('importStatusText');
+            statusDiv.classList.remove('hidden');
+            statusText.innerHTML = '<p style="color: #667eea;">Yükleniyor...</p>';
+
+            try {
+                const response = await fetch('/api/import-excel', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusText.innerHTML = `
+                        <p style="color: #28a745; font-weight: 600;">✓ Başarılı!</p>
+                        <p>Toplam ${result.total} kayıt işlendi</p>
+                        <p>Eklenen: ${result.added}</p>
+                        <p>Atlanan: ${result.skipped}</p>
+                    `;
+                    fileInput.value = '';
+                } else {
+                    statusText.innerHTML = `<p style="color: #dc3545; font-weight: 600;">✗ Hata: ${result.error}</p>`;
+                }
+            } catch (error) {
+                statusText.innerHTML = '<p style="color: #dc3545; font-weight: 600;">✗ Yükleme hatası!</p>';
+            }
+        }
     </script>
 </body>
 </html>

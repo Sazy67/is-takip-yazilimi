@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import os
 from datetime import datetime, timedelta
@@ -6,6 +6,8 @@ import secrets
 import jwt
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from openpyxl import Workbook, load_workbook
+from io import BytesIO
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
@@ -470,3 +472,163 @@ def get_secret_logs():
     cur.close()
     conn.close()
     return jsonify(logs)
+
+# Excel Export
+@app.route('/api/export-excel', methods=['GET'])
+def export_excel():
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
+        return jsonify({'error': 'Yetkisiz işlem'}), 403
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT * FROM kayitlar ORDER BY id')
+    kayitlar = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    # Excel oluştur
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Kayıtlar"
+    
+    # Header
+    headers = ['ID', 'Bölüm', 'Teklif No', 'Müşteri İsmi', 'Teklif Tarihi', 'Onay Tarihi',
+               'Üretime Verilme Tarihi', 'Üretim Numarası', 'Cam Sipariş Tarihi', 
+               'Cam Sipariş Numarası', 'Cam Adedi', 'Üretim Planlama Tarihi',
+               'Paketleme Tarihi', 'Kasetleme Tarihi', 'Sevk Tarihi', 
+               'Teklif Durumu', 'İmalat Durumu', 'Notlar']
+    ws.append(headers)
+    
+    # Data
+    for kayit in kayitlar:
+        row = [
+            kayit['id'],
+            kayit['bolum'],
+            kayit['teklif_no'],
+            kayit['musteri_ismi'],
+            str(kayit['teklif_tarihi']) if kayit['teklif_tarihi'] else '',
+            str(kayit['onay_tarihi']) if kayit['onay_tarihi'] else '',
+            str(kayit['uretime_verilme_tarihi']) if kayit['uretime_verilme_tarihi'] else '',
+            kayit['uretim_numarasi'],
+            str(kayit['cam_siparis_tarihi']) if kayit['cam_siparis_tarihi'] else '',
+            kayit['cam_siparis_numarasi'],
+            kayit['cam_adedi'],
+            str(kayit['uretim_planlama_tarihi']) if kayit['uretim_planlama_tarihi'] else '',
+            str(kayit['paketleme_tarihi']) if kayit['paketleme_tarihi'] else '',
+            str(kayit['kasetleme_tarihi']) if kayit['kasetleme_tarihi'] else '',
+            str(kayit['sevk_tarihi']) if kayit['sevk_tarihi'] else '',
+            'Evet' if kayit['teklif_durumu'] else 'Hayır',
+            'Evet' if kayit['imalat_durumu'] else 'Hayır',
+            kayit['notlar']
+        ]
+        ws.append(row)
+    
+    # BytesIO'ya kaydet
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    log_activity(user_data['username'], 'Excel Yedek Aldı', f'{len(kayitlar)} kayıt', request.remote_addr)
+    
+    return send_file(
+        output,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        as_attachment=True,
+        download_name=f'kayitlar_yedek_{datetime.now().strftime("%Y%m%d")}.xlsx'
+    )
+
+# Excel Import
+@app.route('/api/import-excel', methods=['POST'])
+def import_excel():
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
+        return jsonify({'error': 'Yetkisiz işlem'}), 403
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'Dosya bulunamadı'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Dosya seçilmedi'}), 400
+    
+    try:
+        wb = load_workbook(file)
+        ws = wb.active
+        
+        conn = get_db()
+        cur = conn.cursor()
+        
+        added = 0
+        skipped = 0
+        total = 0
+        
+        # İlk satır header, 2. satırdan başla
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            total += 1
+            
+            # Boş satırları atla
+            if not any(row):
+                skipped += 1
+                continue
+            
+            try:
+                # Tarih değerlerini düzelt
+                def parse_date(val):
+                    if not val or val == '':
+                        return None
+                    if isinstance(val, datetime):
+                        return val.date()
+                    return str(val)
+                
+                # Boolean değerleri düzelt
+                def parse_bool(val):
+                    if isinstance(val, bool):
+                        return val
+                    if isinstance(val, str):
+                        return val.lower() in ['evet', 'yes', 'true', '1']
+                    return False
+                
+                cur.execute('''
+                    INSERT INTO kayitlar (
+                        bolum, teklif_no, musteri_ismi, teklif_tarihi, onay_tarihi,
+                        uretime_verilme_tarihi, uretim_numarasi, cam_siparis_tarihi,
+                        cam_siparis_numarasi, cam_adedi, uretim_planlama_tarihi,
+                        paketleme_tarihi, kasetleme_tarihi, sevk_tarihi,
+                        teklif_durumu, imalat_durumu, notlar
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (
+                    row[1], row[2], row[3],  # bolum, teklif_no, musteri_ismi
+                    parse_date(row[4]), parse_date(row[5]), parse_date(row[6]),  # tarihler
+                    row[7], parse_date(row[8]), row[9],  # uretim_numarasi, cam_siparis_tarihi, cam_siparis_numarasi
+                    row[10], parse_date(row[11]), parse_date(row[12]),  # cam_adedi, uretim_planlama_tarihi, paketleme_tarihi
+                    parse_date(row[13]), parse_date(row[14]),  # kasetleme_tarihi, sevk_tarihi
+                    parse_bool(row[15]), parse_bool(row[16]),  # teklif_durumu, imalat_durumu
+                    row[17] if len(row) > 17 else None  # notlar
+                ))
+                added += 1
+            except Exception as e:
+                print(f"Row error: {e}")
+                skipped += 1
+                continue
+        
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        log_activity(user_data['username'], 'Excel Yedek Yükledi', f'{added} kayıt eklendi, {skipped} atlandı', request.remote_addr)
+        
+        return jsonify({
+            'success': True,
+            'total': total,
+            'added': added,
+            'skipped': skipped
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Excel işleme hatası: {str(e)}'}), 400
+
