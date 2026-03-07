@@ -8,6 +8,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from openpyxl import Workbook, load_workbook
 from io import BytesIO
+import base64
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(16))
@@ -55,6 +56,8 @@ def init_db():
             teklif_durumu BOOLEAN DEFAULT FALSE,
             imalat_durumu BOOLEAN DEFAULT FALSE,
             notlar TEXT,
+            pdf_dosya BYTEA,
+            pdf_dosya_adi VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -64,7 +67,9 @@ def init_db():
         cur.execute('''
             ALTER TABLE kayitlar 
             ADD COLUMN IF NOT EXISTS teklif_durumu BOOLEAN DEFAULT FALSE,
-            ADD COLUMN IF NOT EXISTS imalat_durumu BOOLEAN DEFAULT FALSE
+            ADD COLUMN IF NOT EXISTS imalat_durumu BOOLEAN DEFAULT FALSE,
+            ADD COLUMN IF NOT EXISTS pdf_dosya BYTEA,
+            ADD COLUMN IF NOT EXISTS pdf_dosya_adi VARCHAR(255)
         ''')
         conn.commit()
     except:
@@ -638,3 +643,103 @@ def import_excel():
     except Exception as e:
         return jsonify({'error': f'Excel işleme hatası: {str(e)}'}), 400
 
+
+
+# PDF Upload
+@app.route('/api/kayitlar/<int:id>/pdf', methods=['POST'])
+def upload_pdf(id):
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
+        return jsonify({'error': 'Yetkisiz işlem'}), 403
+    
+    if 'file' not in request.files:
+        return jsonify({'error': 'Dosya bulunamadı'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'Dosya seçilmedi'}), 400
+    
+    if not file.filename.lower().endswith('.pdf'):
+        return jsonify({'error': 'Sadece PDF dosyası yüklenebilir'}), 400
+    
+    try:
+        pdf_data = file.read()
+        
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute('''
+            UPDATE kayitlar 
+            SET pdf_dosya = %s, pdf_dosya_adi = %s
+            WHERE id = %s
+        ''', (pdf_data, file.filename, id))
+        conn.commit()
+        cur.close()
+        conn.close()
+        
+        log_activity(user_data['username'], 'PDF Yükledi', f'Kayıt ID: {id} - {file.filename}', request.remote_addr)
+        
+        return jsonify({'success': True, 'filename': file.filename})
+    except Exception as e:
+        return jsonify({'error': f'PDF yükleme hatası: {str(e)}'}), 400
+
+# PDF Download
+@app.route('/api/kayitlar/<int:id>/pdf', methods=['GET'])
+def download_pdf(id):
+    # Token'ı header veya query parameter'dan al
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    if not token:
+        token = request.args.get('token', '')
+    
+    user_data = verify_token(token)
+    
+    if not user_data:
+        return jsonify({'error': 'Yetkisiz işlem'}), 403
+    
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute('SELECT pdf_dosya, pdf_dosya_adi FROM kayitlar WHERE id=%s', (id,))
+    kayit = cur.fetchone()
+    cur.close()
+    conn.close()
+    
+    if not kayit or not kayit['pdf_dosya']:
+        return jsonify({'error': 'PDF bulunamadı'}), 404
+    
+    return send_file(
+        BytesIO(kayit['pdf_dosya']),
+        mimetype='application/pdf',
+        as_attachment=False,
+        download_name=kayit['pdf_dosya_adi']
+    )
+
+# PDF Delete
+@app.route('/api/kayitlar/<int:id>/pdf', methods=['DELETE'])
+def delete_pdf(id):
+    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    user_data = verify_token(token)
+    
+    if not user_data or user_data['role'] != 'admin':
+        return jsonify({'error': 'Yetkisiz işlem'}), 403
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # PDF bilgisini al
+    cur.execute('SELECT pdf_dosya_adi FROM kayitlar WHERE id=%s', (id,))
+    kayit = cur.fetchone()
+    
+    cur.execute('''
+        UPDATE kayitlar 
+        SET pdf_dosya = NULL, pdf_dosya_adi = NULL
+        WHERE id = %s
+    ''', (id,))
+    conn.commit()
+    cur.close()
+    conn.close()
+    
+    if kayit and kayit['pdf_dosya_adi']:
+        log_activity(user_data['username'], 'PDF Sildi', f'Kayıt ID: {id} - {kayit["pdf_dosya_adi"]}', request.remote_addr)
+    
+    return jsonify({'success': True})

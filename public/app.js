@@ -155,7 +155,15 @@ function renderKayitlar(kayitlar) {
             </td>
             <td class="notlar-cell" id="notlar-${kayit.id}">${kayit.notlar || ''}</td>
             <td class="actions">
+                ${kayit.pdf_dosya_adi ? `
+                    <button onclick="viewPdf(${kayit.id})" class="btn btn-success" title="PDF Görüntüle">📄</button>
+                ` : ''}
                 ${currentUser.role === 'admin' ? `
+                    ${kayit.pdf_dosya_adi ? `
+                        <button onclick="deletePdf(${kayit.id})" class="btn btn-danger" title="PDF Sil">🗑️</button>
+                    ` : `
+                        <button onclick="uploadPdf(${kayit.id})" class="btn btn-success" title="PDF Yükle">📤</button>
+                    `}
                     <button onclick="editKayit(${kayit.id})" class="btn btn-success">Düzenle</button>
                     <button onclick="deleteKayit(${kayit.id})" class="btn btn-danger">Sil</button>
                 ` : `
@@ -680,5 +688,73 @@ async function updateCheckbox(id, field, value) {
     } catch (error) {
         console.error('Checkbox güncelleme hatası:', error);
         alert('Güncelleme hatası');
+    }
+}
+
+
+// PDF Functions
+function uploadPdf(id) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.pdf';
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        if (!file.name.toLowerCase().endsWith('.pdf')) {
+            alert('Sadece PDF dosyası yüklenebilir!');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch(`/api/kayitlar/${id}/pdf`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: formData
+            });
+            
+            if (response.ok) {
+                alert('PDF başarıyla yüklendi!');
+                fetchKayitlar();
+            } else {
+                const error = await response.json();
+                alert('PDF yükleme hatası: ' + (error.error || 'Bilinmeyen hata'));
+            }
+        } catch (error) {
+            alert('Bağlantı hatası');
+        }
+    };
+    input.click();
+}
+
+function viewPdf(id) {
+    const token = localStorage.getItem('token');
+    window.open(`/api/kayitlar/${id}/pdf?token=${token}`, '_blank');
+}
+
+async function deletePdf(id) {
+    if (!confirm('PDF dosyasını silmek istediğinizden emin misiniz?')) return;
+    
+    try {
+        const response = await fetch(`/api/kayitlar/${id}/pdf`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        if (response.ok) {
+            alert('PDF silindi!');
+            fetchKayitlar();
+        } else {
+            alert('PDF silme hatası');
+        }
+    } catch (error) {
+        alert('Bağlantı hatası');
     }
 }
