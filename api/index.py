@@ -212,7 +212,15 @@ def get_current_user():
 def get_kayitlar():
     conn = get_db()
     cur = conn.cursor()
-    cur.execute('SELECT * FROM kayitlar ORDER BY id DESC')
+    cur.execute('''
+        SELECT id, bolum, teklif_no, musteri_ismi, teklif_tarihi, onay_tarihi,
+               uretime_verilme_tarihi, uretim_numarasi, cam_siparis_tarihi,
+               cam_siparis_numarasi, cam_adedi, uretim_planlama_tarihi,
+               paketleme_tarihi, kasetleme_tarihi, sevk_tarihi,
+               teklif_durumu, imalat_durumu, notlar, pdf_dosya_adi, created_at
+        FROM kayitlar 
+        ORDER BY id DESC
+    ''')
     kayitlar = cur.fetchall()
     cur.close()
     conn.close()
