@@ -458,6 +458,9 @@ function showMainApp() {
     } else {
         document.getElementById('newRecordBtn').classList.add('hidden');
     }
+    
+    // Banner'ı göster
+    showUpdateBanner();
 }
 
 // Kullanıcı Yönetimi Fonksiyonları
@@ -757,4 +760,18 @@ async function deletePdf(id) {
     } catch (error) {
         alert('Bağlantı hatası');
     }
+}
+
+
+// Update Banner
+function showUpdateBanner() {
+    const bannerDismissed = localStorage.getItem('updateBanner_pdf_v1');
+    if (!bannerDismissed) {
+        document.getElementById('updateBanner').classList.remove('hidden');
+    }
+}
+
+function closeBanner() {
+    document.getElementById('updateBanner').classList.add('hidden');
+    localStorage.setItem('updateBanner_pdf_v1', 'true');
 }

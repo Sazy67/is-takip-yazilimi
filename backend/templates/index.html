@@ -485,6 +485,71 @@
         .hidden {
             display: none !important;
         }
+
+        /* Update Banner */
+        .update-banner {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 12px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            animation: slideDown 0.5s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .update-banner-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .update-banner-icon {
+            font-size: 24px;
+        }
+
+        .update-banner-text h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .update-banner-text p {
+            margin: 0;
+            font-size: 13px;
+            opacity: 0.95;
+        }
+
+        .update-banner-close {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .update-banner-close:hover {
+            background: rgba(255,255,255,0.3);
+            transform: rotate(90deg);
+        }
     </style>
 </head>
 <body>
@@ -525,6 +590,18 @@
 
     <!-- Main App -->
     <div id="mainApp" class="container hidden">
+        <!-- Update Banner -->
+        <div id="updateBanner" class="update-banner hidden">
+            <div class="update-banner-content">
+                <div class="update-banner-icon">🎉</div>
+                <div class="update-banner-text">
+                    <h3>Yeni Özellik: PDF Yükleme Sistemi!</h3>
+                    <p>Artık her kayıt için PDF dosyası yükleyebilir ve görüntüleyebilirsiniz.</p>
+                </div>
+            </div>
+            <button class="update-banner-close" onclick="closeBanner()">×</button>
+        </div>
+
         <div class="app-header">
             <div class="header-section">
                 <div class="header-left">
