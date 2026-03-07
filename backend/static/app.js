@@ -156,18 +156,18 @@ function renderKayitlar(kayitlar) {
             <td class="notlar-cell" id="notlar-${kayit.id}">${kayit.notlar || ''}</td>
             <td class="actions">
                 ${kayit.pdf_dosya_adi ? `
-                    <button onclick="viewPdf(${kayit.id})" class="btn btn-success" title="PDF Görüntüle">📄</button>
+                    <button onclick="viewPdf(${kayit.id})" class="btn btn-info" title="PDF Görüntüle">PDF</button>
                 ` : ''}
                 ${currentUser.role === 'admin' ? `
                     ${kayit.pdf_dosya_adi ? `
-                        <button onclick="deletePdf(${kayit.id})" class="btn btn-danger" title="PDF Sil">🗑️</button>
+                        <button onclick="deletePdf(${kayit.id})" class="btn btn-danger" title="PDF Sil">PDF Sil</button>
                     ` : `
-                        <button onclick="uploadPdf(${kayit.id})" class="btn btn-success" title="PDF Yükle">📤</button>
+                        <button onclick="uploadPdf(${kayit.id})" class="btn btn-info" title="PDF Yükle">PDF Yükle</button>
                     `}
-                    <button onclick="editKayit(${kayit.id})" class="btn btn-success">Düzenle</button>
+                    <button onclick="editKayit(${kayit.id})" class="btn btn-warning">Düzenle</button>
                     <button onclick="deleteKayit(${kayit.id})" class="btn btn-danger">Sil</button>
                 ` : `
-                    <button onclick="addNoteInline(${kayit.id})" class="btn btn-success" title="Not Ekle">+</button>
+                    <button onclick="addNoteInline(${kayit.id})" class="btn btn-success" title="Not Ekle">+ Not</button>
                 `}
             </td>
         </tr>
